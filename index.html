@@ -146,7 +146,7 @@
 
         <!-- Borang Input (Hanya Untuk Staff) - Grid 3 Ruang -->
         <div id="formsSection" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Borang 1: Jualan (Mod Pembayaran Dibuang) -->
+            <!-- Borang 1: Jualan -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 sm:p-6">
                 <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                     <h2 class="font-bold text-slate-900 flex items-center gap-2 text-base">
@@ -252,7 +252,7 @@
         <!-- ===== RINGKASAN KEWANGAN ===== -->
         <section class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 shadow-lg border border-slate-800 space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-800">
-                <div><h2 class="text-xl font-bold tracking-tight flex items-center gap-2">📊 Ringkasan Kewangan Bulanan</h2><p class="text-xs text-slate-400">Analisis jualan, baki tunai, tunai di kedai & pecahan perbelanjaan</p></div>
+                <div><h2 class="text-xl font-bold tracking-tight flex items-center gap-2">📊 Ringkasan Kewangan Bulanan</h2><p class="text-xs text-slate-400">Analisis jualan, tunai di kedai & pecahan perbelanjaan</p></div>
                 <button onclick="downloadPDF()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all shadow-md">📥 Simpan PDF Laporan Bulan Ini</button>
             </div>
             
@@ -266,19 +266,16 @@
                     <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Terkumpul jualan harian kedai.</div>
                 </div>
 
-                <!-- Kad 2: TOTAL CASH / TUNAI TANGAN & TUNAI DI KEDAI -->
+                <!-- Kad 2: TOTAL CASH DI KEDAI -->
                 <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
                     <div>
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">💵 Total Cash (Tunai)</span>
-                            <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Net Cash</span>
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">🏪 Total Cash di Kedai</span>
+                            <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Cash Kedai</span>
                         </div>
                         <h3 id="sumNetCash" class="text-2xl font-bold text-amber-300 mt-1">RM 0.00</h3>
                     </div>
-                    <div class="mt-3 pt-3 border-t border-slate-700/40 text-[11px] text-slate-300 space-y-1">
-                        <div class="flex justify-between"><span>Belanja Cash:</span><span id="txtCashExpVal" class="font-bold text-rose-400">-RM 0.00</span></div>
-                        <div class="flex justify-between pt-1 border-t border-slate-700/40 text-amber-300 font-bold"><span>🏪 Cash Tinggal di Kedai:</span><span id="txtCashShopVal">RM 0.00</span></div>
-                    </div>
+                    <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Jumlah tunai yang ditinggalkan di kedai.</div>
                 </div>
 
                 <!-- Kad 3: Jumlah Penolakan / Kos -->
@@ -1125,10 +1122,9 @@
         }
 
         // ============================================================
-        // FUNGSI KEWANGAN & PERHITUNGAN TOTAL CASH BULANAN
+        // FUNGSI KEWANGAN
         // ============================================================
         
-        // FUNGSI JUALAN (MOD PEMBAYARAN DIBUANG)
         function addSales(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1137,7 +1133,6 @@
             const amount = parseFloat(document.getElementById('saleAmount').value);
             const id = Date.now();
             
-            // Simpan terus Total Sale tanpa mod pembayaran
             db.ref('sales/' + id).set({ id, date, desc, amount });
             document.getElementById('salesForm').reset();
             document.getElementById('saleDate').valueAsDate = new Date();
@@ -1288,17 +1283,15 @@
                 `;
             });
 
-            // 4. KIRA TOTAL CASH & NET PROFIT
+            // 4. KIRA NET PROFIT & PAPARKAN RINGKASAN
             const totalDeduction = catSewaTotal + catElektrikTotal + catAirTotal + catGajiTotal + catAisTotal + catLainTotal;
             const netProfit = totalSalesMonth - totalDeduction;
 
             // Kemaskini Kad Total Sale
             document.getElementById('sumTotalSales').innerText = `RM ${totalSalesMonth.toFixed(2)}`;
 
-            // Kemaskini Kad TOTAL CASH BULANAN & CASH DI KEDAI
-            document.getElementById('sumNetCash').innerText = `RM ${(totalSalesMonth - expCashTotal).toFixed(2)}`;
-            document.getElementById('txtCashExpVal').innerText = `-RM ${expCashTotal.toFixed(2)}`;
-            document.getElementById('txtCashShopVal').innerText = `RM ${totalCashShopMonth.toFixed(2)}`;
+            // Kemaskini Kad TOTAL CASH DI KEDAI
+            document.getElementById('sumNetCash').innerText = `RM ${totalCashShopMonth.toFixed(2)}`;
 
             // Kemaskini Kad Kos / Belanja
             document.getElementById('sumTotalDeduction').innerText = `RM ${totalDeduction.toFixed(2)}`;
@@ -1337,10 +1330,9 @@
             const formattedMonthTitle = `${monthName} ${yearStr}`;
 
             const totalSales = document.getElementById('sumTotalSales').innerText;
-            const totalCash = document.getElementById('sumNetCash').innerText;
+            const totalCashInShop = document.getElementById('sumNetCash').innerText;
             const totalDeduction = document.getElementById('sumTotalDeduction').innerText;
             const netProfit = document.getElementById('sumNetProfit').innerText;
-            const totalCashShop = document.getElementById('txtCashShopVal').innerText;
 
             const expCash = document.getElementById('sumExpCash').innerText;
             const expQR = document.getElementById('sumExpQR').innerText;
@@ -1547,7 +1539,7 @@
                     <div class="header-container">
                         <div>
                             <h1 class="shop-title">Laporan Kewangan Bulanan</h1>
-                            <p class="doc-sub">Sistem Urus Niaga & Belanja • Ringkasan Total Sale, Cash Tangan & Cash Kedai</p>
+                            <p class="doc-sub">Sistem Urus Niaga & Belanja • Ringkasan Total Sale, Cash Kedai & Perbelanjaan</p>
                         </div>
                         <div class="month-badge">
                             ${formattedMonthTitle}
@@ -1562,9 +1554,9 @@
                             <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Total Sale Kedai</div>
                         </div>
                         <div class="card">
-                            <div class="card-label">Total Cash (Net Cash)</div>
-                            <div class="card-val text-amber">${totalCash}</div>
-                            <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Cash Kedai: ${totalCashShop}</div>
+                            <div class="card-label">Total Cash di Kedai</div>
+                            <div class="card-val text-amber">${totalCashInShop}</div>
+                            <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Peti Tunai / Cash Kedai</div>
                         </div>
                         <div class="card">
                             <div class="card-label">Jumlah Kos / Belanja</div>
