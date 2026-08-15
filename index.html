@@ -139,7 +139,7 @@
                         <span id="triggerCloudStatus" class="text-xs text-blue-100 font-medium">☁️ Sync</span>
                     </div>
                     <h2 class="text-lg font-bold">📋 Semakan Stok Harian</h2>
-                    <p class="text-xs text-blue-100">Kemaskini baki syrup, susu, cawan & packaging.</p>
+                    <p class="text-xs text-blue-100">Kemaskini baki Susu, syrup, cawan & packaging.</p>
                 </div>
                 <button onclick="openStockModal()" class="w-full sm:w-auto bg-white text-blue-700 hover:bg-blue-50 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">
                     📦 Buka Stocktake ✨
@@ -465,7 +465,7 @@
                     <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
                     <div>
                         <h2 class="font-bold text-slate-900 text-lg">📋 Semakan Stok Harian</h2>
-                        <p class="text-xs text-slate-500">Kemaskini baki syrup, susu, cawan & packaging (Limit Pcs 1 - 2000)</p>
+                        <p class="text-xs text-slate-500">Kemaskini baki Susu, syrup, cawan & packaging (Limit Pcs 1 - 2000)</p>
                     </div>
                 </div>
                 <button onclick="closeStockModal()" class="w-9 h-9 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold text-sm flex items-center justify-center transition-all active:scale-90">
@@ -513,6 +513,7 @@
                 <!-- Tambah Item (Staff sahaja) -->
                 <div class="staff-only flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
                     <select id="newSyrupCategory" class="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="🥛 Susu Farm Fresh">🥛 Susu Farm Fresh</option>
                         <option value="🥤 Syrup & Sos">🥤 Syrup & Sos</option>
                         <option value="🍫 Powder & Biji Kopi">🍫 Powder & Biji Kopi</option>
                         <option value="🥤 Cawan & Packaging">🥤 Cawan & Packaging</option>
@@ -912,8 +913,10 @@
         // BAHAGIAN STOCKTAKE: BAKI BERTERUSAN (MASTER STOCK)
         // ============================================================
         window.defaultCategories = {
+            "🥛 Susu Farm Fresh": [
+                { name: "Susu Farm Fresh Barista", unit: "pcs", target: 5 }
+            ],
             "🥤 Syrup & Sos": [
-                { name: "Susu Farm Fresh Barista", unit: "pcs", target: 5 },
                 { name: "Syrup Vanilla", unit: "botol", target: 5 },
                 { name: "Syrup Salted Caramel", unit: "botol", target: 5 },
                 { name: "Syrup Hazelnut", unit: "botol", target: 5 },
@@ -1002,7 +1005,7 @@
                     if (typeof item === 'string') {
                         let unit = catName.includes('Packaging') ? 'pcs' : 'botol';
                         if (item.includes('Beans') || item.includes('Powder')) unit = 'peket';
-                        if (item.includes('Farm Fresh')) unit = 'pcs';
+                        if (item.includes('Farm Fresh') || catName.includes('Susu')) unit = 'pcs';
                         return { name: item, unit: unit, target: 5 };
                     }
                     let targetVal = parseInt(item.target) || 5;
