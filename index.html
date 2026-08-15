@@ -474,7 +474,13 @@
             </div>
 
             <!-- Modal Body (Scrollable) -->
-            <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
+                <!-- BARIAN CARIAN STOK (SEARCH FEATURE BARU) -->
+                <div class="relative">
+                    <input type="text" id="stockSearchInput" oninput="renderStockTable()" placeholder="🔍 Cari nama item atau bahan (cth: Susu, Vanilla, Cawan, Matcha)..." class="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-2xs">
+                    <button onclick="clearStockSearch()" title="Padam Carian" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center bg-slate-100">✕</button>
+                </div>
+
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-blue-50/60 p-3.5 rounded-2xl border border-blue-100">
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="flex items-center gap-2 text-sm text-slate-700">
@@ -840,7 +846,7 @@
         }
 
         // ============================================================
-        // FUNGSI MODAL STOCKTAKE
+        // FUNGSI MODAL STOCKTAKE & CARIAN
         // ============================================================
         function openStockModal() {
             const modal = document.getElementById('stockModal');
@@ -864,6 +870,15 @@
                 modal.classList.add('opacity-0', 'pointer-events-none');
                 document.body.style.overflow = 'auto';
             }, 200);
+        }
+
+        function clearStockSearch() {
+            const searchInput = document.getElementById('stockSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                renderStockTable();
+                searchInput.focus();
+            }
         }
 
         document.getElementById('stockModal').addEventListener('click', (e) => {
@@ -1043,15 +1058,23 @@
             const tbody = document.getElementById('syrupTableBody');
             tbody.innerHTML = '';
             const isBoss = (currentRole === 'boss');
+            const searchQuery = (document.getElementById('stockSearchInput')?.value || '').toLowerCase().trim();
 
             document.querySelectorAll('.col-action').forEach(col => {
                 col.style.display = isBoss ? 'none' : '';
             });
 
             const categories = window.stockCategories || window.defaultCategories;
+            let totalMatchesFound = 0;
 
             Object.keys(categories).forEach((catName) => {
-                const items = categories[catName] || [];
+                const items = (categories[catName] || []).filter(itemObj => 
+                    itemObj.name.toLowerCase().includes(searchQuery) || catName.toLowerCase().includes(searchQuery)
+                );
+
+                if (items.length === 0) return; // Abaikan kategori jika tiada padanan
+
+                totalMatchesFound += items.length;
 
                 const catHeaderTr = document.createElement('tr');
                 catHeaderTr.className = "bg-slate-100/90 font-bold text-slate-800 text-xs tracking-wide uppercase border-y border-slate-200";
@@ -1121,6 +1144,16 @@
                     tbody.appendChild(tr);
                 });
             });
+
+            if (totalMatchesFound === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${isBoss ? '4' : '5'}" class="py-8 text-center text-slate-400 text-xs font-medium">
+                            🔍 Tiada item stok ditemui mengikut carian "${searchQuery}".
+                        </td>
+                    </tr>
+                `;
+            }
 
             if (!isBoss) {
                 document.querySelectorAll('.btn-minus').forEach(btn => {
