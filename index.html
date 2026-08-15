@@ -67,7 +67,7 @@
             background: rgba(30, 41, 59, 0.6);
         }
 
-        /* Animasi Khas Chat Popup */
+        /* Animasi Khas Chat Popup & Modals */
         @keyframes popIn {
             0% { transform: scale(0.8) translateY(20px); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
@@ -129,23 +129,41 @@
             <span class="text-xs font-bold bg-amber-200/80 px-2.5 py-1 rounded-lg">Semakan Sahaja</span>
         </div>
 
-        <!-- KAD TRIGGER SEMAKAN STOK (RINGKAS) -->
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-md border border-blue-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                    <span id="stockAccessTag" class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-semibold backdrop-blur-md">Khas Untuk Staff</span>
-                    <span id="triggerCloudStatus" class="text-xs text-blue-100 font-medium">☁️ Sync</span>
+        <!-- KAD TRIGGER SEMAKAN STOK & PETI TUNAI (RINGKAS) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Kad 1: Trigger Stocktake -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-md border border-blue-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span id="stockAccessTag" class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-semibold backdrop-blur-md">Khas Untuk Staff</span>
+                        <span id="triggerCloudStatus" class="text-xs text-blue-100 font-medium">☁️ Sync</span>
+                    </div>
+                    <h2 class="text-lg font-bold">📋 Semakan Stok Harian</h2>
+                    <p class="text-xs text-blue-100">Kemaskini baki syrup, susu, cawan & packaging.</p>
                 </div>
-                <h2 class="text-lg font-bold">📋 Semakan Stok Harian (Stocktake)</h2>
-                <p class="text-xs text-blue-100">Kemaskini baki syrup, susu, cawan & straw (pcs/botol/peket) ke Cloud.</p>
+                <button onclick="openStockModal()" class="w-full sm:w-auto bg-white text-blue-700 hover:bg-blue-50 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">
+                    📦 Buka Stocktake ✨
+                </button>
             </div>
-            <button onclick="openStockModal()" class="w-full sm:w-auto bg-white text-blue-700 hover:bg-blue-50 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">
-                📦 Buka Semakan Stok ✨
-            </button>
+
+            <!-- Kad 2: Trigger Cash Kedai Modal -->
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-5 shadow-md border border-amber-400 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-semibold backdrop-blur-md">Peti Tunai / Float</span>
+                        <span class="text-xs text-amber-100 font-medium">💵 Cash Shop</span>
+                    </div>
+                    <h2 class="text-lg font-bold">🏪 Key-in Cash Kedai</h2>
+                    <p class="text-xs text-amber-100">Rekod duit tinggal (Float) & duit keluar dari kedai.</p>
+                </div>
+                <button onclick="openCashShopModal()" class="w-full sm:w-auto bg-slate-900 text-amber-300 hover:bg-slate-800 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">
+                    💰 Urus Cash Kedai ✨
+                </button>
+            </div>
         </div>
 
-        <!-- Borang Input (Hanya Untuk Staff) - Grid 3 Ruang -->
-        <div id="formsSection" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Borang Input Kemas (2 Ruang Utama) -->
+        <div id="formsSection" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Borang 1: Jualan -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 sm:p-6">
                 <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
@@ -195,22 +213,6 @@
                     <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-xs">Simpan Perbelanjaan</button>
                 </form>
             </div>
-
-            <!-- Borang 3: Key-in Cash Sale Tinggal di Kedai -->
-            <div class="bg-white rounded-2xl shadow-xs border border-amber-200 p-5 sm:p-6 relative">
-                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                    <h2 class="font-bold text-slate-900 flex items-center gap-2 text-base">
-                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Key-in Cash Tinggal di Kedai
-                    </h2>
-                    <span class="text-[11px] font-semibold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">Peti Tunai / Float</span>
-                </div>
-                <form id="cashShopForm" onsubmit="addCashInShop(event)" class="space-y-4">
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Tarikh</label><input type="date" id="cashShopDate" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Catatan / Peti Tunai</label><input type="text" id="cashShopDesc" placeholder="Cth: Baki cash ditinggalkan dalam laci" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Jumlah Cash Tinggal (RM)</label><input type="number" step="0.01" id="cashShopAmount" placeholder="0.00" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-semibold text-amber-600"></div>
-                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow-xs">Simpan Cash Kedai</button>
-                </form>
-            </div>
         </div>
 
         <!-- Jadual Sejarah - Grid 3 Ruang -->
@@ -237,9 +239,9 @@
                 </div>
             </div>
 
-            <!-- Sejarah Cash Tinggal di Kedai -->
+            <!-- Sejarah Cash Kedai (Tinggal & Keluar) -->
             <div class="bg-white rounded-2xl shadow-xs border border-amber-200 p-5">
-                <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span class="text-amber-800">🏪 Sejarah Cash Tinggal di Kedai</span><span id="cashShopCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
+                <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span class="text-amber-800">🏪 Sejarah Cash Kedai</span><span id="cashShopCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
                     <table class="w-full text-left border-collapse text-sm">
                         <thead class="sticky top-0 bg-white border-b border-slate-100 text-slate-400 text-[11px] uppercase"><tr><th class="py-2.5 px-2">Tarikh</th><th class="py-2.5 px-2">Catatan</th><th class="py-2.5 px-2 text-right">RM</th><th class="py-2.5 px-2 text-center col-action">Padam</th></tr></thead>
@@ -270,12 +272,12 @@
                 <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
                     <div>
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">🏪 Total Cash di Kedai</span>
-                            <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Cash Kedai</span>
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">🏪 Baki Cash di Kedai</span>
+                            <span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Float / Peti</span>
                         </div>
                         <h3 id="sumNetCash" class="text-2xl font-bold text-amber-300 mt-1">RM 0.00</h3>
                     </div>
-                    <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Jumlah tunai yang ditinggalkan di kedai.</div>
+                    <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Tunai tinggal ditolak tunai keluar.</div>
                 </div>
 
                 <!-- Kad 3: Jumlah Penolakan / Kos -->
@@ -314,6 +316,61 @@
             </div>
         </section>
     </main>
+
+    <!-- ===== POPUP MODAL KHAS: CASH KEDAI (DUIT TINGGAL & DUIT KELUAR) ===== -->
+    <div id="cashShopModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 ease-out">
+        <div id="cashShopModalBox" class="bg-white rounded-3xl shadow-2xl border border-amber-100 w-full max-w-lg p-6 sm:p-7 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
+            
+            <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl font-bold">
+                        💰
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900 tracking-tight">Key-in Cash Kedai</h2>
+                        <p class="text-xs text-slate-500">Duit tinggal di kedai (Float) & Duit keluar</p>
+                    </div>
+                </div>
+                <button onclick="closeCashShopModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center transition-all">
+                    ✕
+                </button>
+            </div>
+
+            <form id="cashShopFormModal" onsubmit="addCashInShop(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tarikh</label>
+                    <input type="date" id="cashShopDateModal" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-medium">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jenis Transaksi Cash</label>
+                    <select id="cashShopTypeModal" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50/50 font-semibold text-amber-900">
+                        <option value="in">📥 Duit Cash Tinggal di Kedai (Float / Baki)</option>
+                        <option value="out">📤 Duit Keluar Dari Kedai (Cash Out / Ambil)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Catatan / Nota</label>
+                    <input type="text" id="cashShopDescModal" placeholder="Cth: Baki float dalam laci / Ambil duit beli ais" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jumlah (RM)</label>
+                    <input type="number" step="0.01" id="cashShopAmountModal" placeholder="0.00" required class="w-full p-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-bold text-amber-600">
+                </div>
+
+                <div class="pt-2 flex items-center gap-3">
+                    <button type="button" onclick="closeCashShopModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-xs transition-all">
+                        Batal
+                    </button>
+                    <button type="submit" class="w-2/3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md">
+                        Simpan Rekod Cash 🚀
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- ===== BUTANG FLOATING CHAT DI SEBELAH KANAN BAWAH ===== -->
     <div class="fixed bottom-5 right-5 z-40">
@@ -366,8 +423,8 @@
     </div>
 
     <!-- ===== POPUP MODAL LOG MASUK (AUTHENTICATION) ===== -->
-    <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out">
-        <div id="loginModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 sm:p-8 transform scale-90 opacity-0 transition-all duration-300 ease-out overflow-hidden">
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out opacity-0 pointer-events-none">
+        <div id="loginModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 sm:p-8 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             <div class="text-center mb-6">
                 <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 text-2xl mb-3 font-bold shadow-xs">
                     🔐
@@ -523,8 +580,8 @@
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.classList.add('opacity-100');
             setTimeout(() => {
-                box.classList.remove('scale-90', 'opacity-0');
-                box.classList.add('scale-100', 'opacity-100');
+                box.classList.remove('scale-90');
+                box.classList.add('scale-100');
             }, 50);
             document.body.style.overflow = 'hidden';
         }
@@ -532,8 +589,8 @@
         function closeLoginModal() {
             const modal = document.getElementById('loginModal');
             const box = document.getElementById('loginModalBox');
-            box.classList.remove('scale-100', 'opacity-100');
-            box.classList.add('scale-90', 'opacity-0');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-90');
             setTimeout(() => {
                 modal.classList.remove('opacity-100');
                 modal.classList.add('opacity-0', 'pointer-events-none');
@@ -602,6 +659,41 @@
             renderStockTable();
             initChatSystem();
         }
+
+        // ============================================================
+        // MODAL CASH KEDAI (ANIMASI & POPUP)
+        // ============================================================
+        function openCashShopModal() {
+            if (currentRole === 'boss') {
+                showToast("Mod Boss (Semakan Sahaja)");
+                return;
+            }
+            const modal = document.getElementById('cashShopModal');
+            const box = document.getElementById('cashShopModalBox');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+            setTimeout(() => {
+                box.classList.remove('scale-90');
+                box.classList.add('scale-100');
+            }, 50);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCashShopModal() {
+            const modal = document.getElementById('cashShopModal');
+            const box = document.getElementById('cashShopModalBox');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-90');
+            setTimeout(() => {
+                modal.classList.remove('opacity-100');
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                document.body.style.overflow = 'auto';
+            }, 200);
+        }
+
+        document.getElementById('cashShopModal').addEventListener('click', (e) => {
+            if (e.target.id === 'cashShopModal') closeCashShopModal();
+        });
 
         // ============================================================
         // SISTEM CHAT REALTIME (BOSS & STAFF)
@@ -780,6 +872,7 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeStockModal();
+                closeCashShopModal();
                 if (isChatOpen) toggleChatModal();
             }
         });
@@ -794,7 +887,7 @@
         
         document.getElementById('saleDate').valueAsDate = today;
         document.getElementById('expDate').valueAsDate = today;
-        document.getElementById('cashShopDate').valueAsDate = today;
+        document.getElementById('cashShopDateModal').valueAsDate = today;
         document.getElementById('filterMonth').value = today.toISOString().slice(0, 7);
 
         db.ref('sales').on('value', (snapshot) => {
@@ -816,7 +909,7 @@
         });
 
         // ============================================================
-        // BAHAGIAN STOCKTAKE: KATALOG INDUK KEKAL & BAKI IKUT TARIKH
+        // BAHAGIAN STOCKTAKE: BAKI BERTERUSAN (MASTER STOCK)
         // ============================================================
         window.defaultCategories = {
             "🥤 Syrup & Sos": [
@@ -853,8 +946,7 @@
         window.stockCategories = JSON.parse(JSON.stringify(window.defaultCategories));
         window.stockData = {};
 
-        let stockListener = null;
-
+        // 1. Muat turun Katalog Item
         db.ref('inventoryCatalog').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -868,11 +960,8 @@
             renderStockTable();
         });
 
-        function attachStockListener(dateStr) {
-            if (stockListener) {
-                db.ref('stocktake/' + dateStr).off();
-                stockListener = null;
-            }
+        // 2. Listener Utama Baki Stok Berterusan (Master Stock)
+        function initMasterStockListener() {
             const cloudStatus = document.getElementById('cloudStatus');
             const triggerStatus = document.getElementById('triggerCloudStatus');
 
@@ -880,18 +969,18 @@
             cloudStatus.className = 'text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-full';
             if (triggerStatus) triggerStatus.innerText = '🔄 Menyegerak...';
 
-            stockListener = db.ref('stocktake/' + dateStr);
-            stockListener.on('value', (snapshot) => {
+            db.ref('inventoryStock').on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data && data.stockData) {
-                    window.stockData = data.stockData;
+                if (data) {
+                    window.stockData = data;
                 } else {
+                    // Jika data belum wujud langsung di Cloud, baru beri nilai asas 5
                     window.stockData = {};
                     Object.values(window.stockCategories).flat().forEach(itemObj => {
                         window.stockData[itemObj.name] = 5;
                     });
                     if (currentRole === 'staff') {
-                        saveDailyStockToFirebase(dateStr);
+                        saveMasterStockToFirebase();
                     }
                 }
                 cloudStatus.innerText = '☁️ Tersimpan ke Firebase';
@@ -899,7 +988,7 @@
                 if (triggerStatus) triggerStatus.innerText = '☁️ Tersimpan ke Firebase';
                 renderStockTable();
             }, (error) => {
-                console.error('Stock listener error:', error);
+                console.error('Master stock listener error:', error);
                 cloudStatus.innerText = '❌ Gagal sambung';
                 cloudStatus.className = 'text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full';
                 if (triggerStatus) triggerStatus.innerText = '❌ Gagal';
@@ -933,13 +1022,18 @@
             db.ref('inventoryCatalog').set(window.stockCategories).catch(err => console.error('Save catalog error:', err));
         }
 
-        function saveDailyStockToFirebase(dateStr) {
+        // Simpan Baki Stok Utama Ke Cloud & Snapshot Tarikh Pilihan
+        function saveMasterStockToFirebase() {
             if (currentRole !== 'staff') return;
-            const data = {
-                stockData: window.stockData || {},
-                updatedAt: new Date().toISOString()
-            };
-            db.ref('stocktake/' + dateStr).set(data).catch(err => console.error('Save daily stock error:', err));
+            db.ref('inventoryStock').set(window.stockData).catch(err => console.error('Save master stock error:', err));
+            
+            const dateStr = document.getElementById('stockDate').value;
+            if (dateStr) {
+                db.ref('stocktake/' + dateStr).set({
+                    stockData: window.stockData,
+                    updatedAt: new Date().toISOString()
+                }).catch(err => console.error('Save snapshot error:', err));
+            }
         }
 
         function renderStockTable() {
@@ -1087,8 +1181,7 @@
                                     delete window.stockData[name];
                                     
                                     saveCatalogToFirebase();
-                                    const dateStr = document.getElementById('stockDate').value;
-                                    saveDailyStockToFirebase(dateStr);
+                                    saveMasterStockToFirebase();
                                     renderStockTable();
                                 }
                             }
@@ -1103,8 +1196,7 @@
             if (newQty < 0) newQty = 0;
             if (newQty > 2000) newQty = 2000;
             window.stockData[syrup] = newQty;
-            const dateStr = document.getElementById('stockDate').value;
-            saveDailyStockToFirebase(dateStr);
+            saveMasterStockToFirebase();
             renderStockTable();
         }
 
@@ -1122,7 +1214,7 @@
         }
 
         // ============================================================
-        // FUNGSI KEWANGAN
+        // FUNGSI KEWANGAN & CASH KEDAI
         // ============================================================
         
         function addSales(e) {
@@ -1151,19 +1243,23 @@
             db.ref('expenses/' + id).set({ id, date, method, category, desc, amount });
             document.getElementById('expenseForm').reset();
             document.getElementById('expDate').valueAsDate = new Date();
+            showToast("Perbelanjaan Berjaya Disimpan!");
         }
 
         function addCashInShop(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
-            const date = document.getElementById('cashShopDate').value;
-            const desc = document.getElementById('cashShopDesc').value;
-            const amount = parseFloat(document.getElementById('cashShopAmount').value);
+            const date = document.getElementById('cashShopDateModal').value;
+            const type = document.getElementById('cashShopTypeModal').value;
+            const desc = document.getElementById('cashShopDescModal').value;
+            const amount = parseFloat(document.getElementById('cashShopAmountModal').value);
             const id = Date.now();
-            db.ref('cashInShop/' + id).set({ id, date, desc, amount });
-            document.getElementById('cashShopForm').reset();
-            document.getElementById('cashShopDate').valueAsDate = new Date();
-            showToast("Rekod Cash Tinggal di Kedai Disimpan!");
+            
+            db.ref('cashInShop/' + id).set({ id, date, type, desc, amount });
+            document.getElementById('cashShopFormModal').reset();
+            document.getElementById('cashShopDateModal').valueAsDate = new Date();
+            closeCashShopModal();
+            showToast("Rekod Cash Kedai Disimpan!");
         }
 
         function deleteSale(id) {
@@ -1178,7 +1274,7 @@
 
         function deleteCashInShop(id) {
             if (currentRole !== 'staff') return;
-            if (confirm("Padam rekod cash tinggal di kedai ini?")) db.ref('cashInShop/' + id).remove();
+            if (confirm("Padam rekod cash kedai ini?")) db.ref('cashInShop/' + id).remove();
         }
 
         function renderFinance() {
@@ -1191,7 +1287,7 @@
             let expCashTotal = 0, expQRTotal = 0, expTnGTot = 0;
             let catSewaTotal = 0, catElektrikTotal = 0, catAirTotal = 0, catGajiTotal = 0, catAisTotal = 0, catLainTotal = 0;
             
-            // Variabel Cash Tinggal di Kedai
+            // Variabel Cash Kedai
             let totalCashShopMonth = 0;
 
             const isBoss = (currentRole === 'boss');
@@ -1258,26 +1354,36 @@
                 `;
             });
 
-            // 3. KIRA DAN PAPAR CASH TINGGAL DI KEDAI
+            // 3. KIRA DAN PAPAR CASH KEDAI (TINGGAL & KELUAR)
             const cashShopBody = document.getElementById('cashShopTableBody');
             cashShopBody.innerHTML = '';
             const filteredCashShop = cashInShop.sort((a, b) => new Date(b.date) - new Date(a.date));
             document.getElementById('cashShopCount').innerText = `${filteredCashShop.length} rekod`;
 
             filteredCashShop.forEach(item => {
+                const isOut = (item.type === 'out');
+                
                 if (item.date && item.date.startsWith(selectedMonth)) {
-                    totalCashShopMonth += item.amount;
+                    if (isOut) totalCashShopMonth -= item.amount;
+                    else totalCashShopMonth += item.amount;
                 }
                 const deleteBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+
+                const badgeTag = isOut 
+                    ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>`
+                    : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>`;
+
+                const amtClass = isOut ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold';
+                const signStr = isOut ? '-' : '+';
 
                 cashShopBody.innerHTML += `
                     <tr class="hover:bg-slate-50/80">
                         <td class="py-2.5 px-2">
-                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">🏪 Kedai</span>
+                            ${badgeTag}
                             <div class="text-[11px] text-slate-400">${item.date}</div>
                         </td>
                         <td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td>
-                        <td class="py-2.5 px-2 text-right font-semibold text-amber-600">RM ${item.amount.toFixed(2)}</td>
+                        <td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${item.amount.toFixed(2)}</td>
                         <td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td>
                     </tr>
                 `;
@@ -1373,16 +1479,20 @@
                 expenseTableRows = `<tr><td colspan="4" style="text-align: center; padding: 12px; color: #94a3b8; font-style: italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
             }
 
-            let cashShopTableRows = monthCashShop.map(c => `
+            let cashShopTableRows = monthCashShop.map(c => {
+                const isOut = (c.type === 'out');
+                const signStr = isOut ? '-' : '+';
+                const colorStr = isOut ? '#dc2626' : '#d97706';
+                return `
                 <tr>
                     <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${c.date}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${c.desc}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #d97706; font-weight: 600;">RM ${parseFloat(c.amount).toFixed(2)}</td>
+                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${isOut ? '[DUIT KELUAR] ' : '[CASH TINGGAL] '}${c.desc}</td>
+                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${colorStr}; font-weight: 600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td>
                 </tr>
-            `).join('');
+            `}).join('');
 
             if (monthCashShop.length === 0) {
-                cashShopTableRows = `<tr><td colspan="3" style="text-align: center; padding: 12px; color: #94a3b8; font-style: italic;">Tiada rekod cash tinggal di kedai</td></tr>`;
+                cashShopTableRows = `<tr><td colspan="3" style="text-align: center; padding: 12px; color: #94a3b8; font-style: italic;">Tiada rekod cash kedai</td></tr>`;
             }
 
             const printWindow = window.open('', '_blank');
@@ -1554,9 +1664,9 @@
                             <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Total Sale Kedai</div>
                         </div>
                         <div class="card">
-                            <div class="card-label">Total Cash di Kedai</div>
+                            <div class="card-label">Baki Cash di Kedai</div>
                             <div class="card-val text-amber">${totalCashInShop}</div>
-                            <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Peti Tunai / Cash Kedai</div>
+                            <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Peti Tunai / Float</div>
                         </div>
                         <div class="card">
                             <div class="card-label">Jumlah Kos / Belanja</div>
@@ -1628,7 +1738,7 @@
                             </table>
                         </div>
                         <div>
-                            <div class="sec-title">Cash Tinggal Kedai</div>
+                            <div class="sec-title">Cash Kedai</div>
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -1714,13 +1824,12 @@
 
         function resetStock() {
             if (currentRole !== 'staff') return;
-            if (confirm("Reset semua baki semasa item kepada nilai default (5) untuk tarikh ini?")) {
+            if (confirm("Reset semua baki semasa item kepada nilai default (5)?")) {
                 const categories = window.stockCategories || window.defaultCategories;
                 Object.values(categories).flat().forEach(itemObj => {
                     window.stockData[itemObj.name] = 5;
                 });
-                const dateStr = document.getElementById('stockDate').value;
-                saveDailyStockToFirebase(dateStr);
+                saveMasterStockToFirebase();
                 renderStockTable();
                 showToast("Baki semasa telah direset ke 5");
             }
@@ -1732,10 +1841,12 @@
         const stockDateInput = document.getElementById('stockDate');
         stockDateInput.value = today.toISOString().split('T')[0];
 
-        attachStockListener(stockDateInput.value);
+        // Jalankan listener baki berterusan (Master Stock)
+        initMasterStockListener();
 
-        stockDateInput.addEventListener('change', (e) => {
-            attachStockListener(e.target.value);
+        // Tukar tarikh untuk tujuan simpanan snapshot harian (baki stok tidak akan di-reset)
+        stockDateInput.addEventListener('change', () => {
+            saveMasterStockToFirebase();
         });
 
         document.getElementById('btnWhatsapp').addEventListener('click', copyWhatsAppReport);
@@ -1766,9 +1877,7 @@
                 window.stockData[name] = 5;
                 
                 saveCatalogToFirebase();
-                
-                const dateStr = document.getElementById('stockDate').value;
-                saveDailyStockToFirebase(dateStr);
+                saveMasterStockToFirebase();
                 
                 renderStockTable();
                 input.value = '';
