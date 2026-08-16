@@ -317,7 +317,7 @@
         </section>
     </main>
 
-    <!-- ===== POPUP MODAL KHAS: CASH KEDAI (DUIT TINGGAL & DUIT KELUAR) ===== -->
+    <!-- ===== POPUP MODAL CASH KEDAI (DUIT TINGGAL & DUIT KELUAR) ===== -->
     <div id="cashShopModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 ease-out">
         <div id="cashShopModalBox" class="bg-white rounded-3xl shadow-2xl border border-amber-100 w-full max-w-lg p-6 sm:p-7 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             
@@ -426,8 +426,9 @@
     <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out opacity-0 pointer-events-none">
         <div id="loginModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 sm:p-8 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 text-2xl mb-3 font-bold shadow-xs">
-                    🔐
+                <!-- LOGO INTERFACE LOG IN -->
+                <div class="flex justify-center mb-3">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKNTcswI0MKvgwch0V6Lal3qR08ozQYkBACiB7xYPitnVeS5yWka1j3Zg&s=10" alt="Logo Kedai" class="w-20 h-20 object-contain rounded-2xl p-1 bg-slate-50 border border-slate-100 shadow-xs" />
                 </div>
                 <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Log Masuk Sistem</h2>
                 <p class="text-xs text-slate-500 mt-1">Sila masukkan ID Pengguna & Kata Laluan</p>
@@ -1712,13 +1713,6 @@
             const expCash = document.getElementById('sumExpCash').innerText;
             const expQR = document.getElementById('sumExpQR').innerText;
 
-            const sewa = document.getElementById('catSewa').innerText;
-            const elektrik = document.getElementById('catElektrik').innerText;
-            const air = document.getElementById('catAir').innerText;
-            const gaji = document.getElementById('catGaji').innerText;
-            const ais = document.getElementById('catAis').innerText;
-            const lain = document.getElementById('catLain').innerText;
-
             const monthSales = sales.filter(s => s.date && s.date.startsWith(selectedMonth));
             const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
             const monthCashShop = cashInShop.filter(c => c.date && c.date.startsWith(selectedMonth));
@@ -1841,58 +1835,6 @@
                         .text-rose { color: #dc2626; }
                         .text-sky { color: #0284c7; }
 
-                        .sec-title { 
-                            font-size: 11px; 
-                            font-weight: 800; 
-                            color: #0f172a; 
-                            text-transform: uppercase; 
-                            letter-spacing: 0.5px;
-                            margin-bottom: 8px; 
-                            padding-bottom: 4px; 
-                            border-bottom: 1px solid #cbd5e1; 
-                        }
-
-                        .cat-table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            margin-bottom: 16px; 
-                        }
-                        .cat-table th, .cat-table td { 
-                            border: 1px solid #e2e8f0; 
-                            padding: 6px 8px; 
-                            text-align: center; 
-                        }
-                        .cat-table th { 
-                            background: #f1f5f9; 
-                            font-size: 9px; 
-                            color: #475569; 
-                            text-transform: uppercase; 
-                        }
-                        .cat-table td { 
-                            font-weight: 700; 
-                            font-size: 11px; 
-                        }
-
-                        .tables-flex { 
-                            display: grid; 
-                            grid-template-columns: 1fr 1fr 1fr; 
-                            gap: 10px; 
-                            margin-bottom: 20px; 
-                        }
-                        .data-table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            font-size: 10px; 
-                        }
-                        .data-table th { 
-                            background: #f8fafc; 
-                            border-bottom: 1px solid #cbd5e1;
-                            padding: 6px 8px; 
-                            font-weight: bold; 
-                            color: #475569; 
-                            text-align: left;
-                        }
-
                         .footer-bar { 
                             display: flex; 
                             justify-content: space-between; 
@@ -1945,230 +1887,26 @@
                         <div class="card">
                             <div class="card-label">Untung Bersih</div>
                             <div class="card-val text-sky">${netProfit}</div>
-                            <div style="font-size: 8.5px; color: #64748b; margin-top: 4px;">Jualan ditolak kos</div>
                         </div>
                     </div>
-
-                    <!-- PECAHAN KATEGORI -->
-                    <div class="sec-title">Pecahan Perbelanjaan Mengikut Kategori</div>
-                    <table class="cat-table">
-                        <thead>
-                            <tr>
-                                <th>🏢 Sewa Kedai</th>
-                                <th>⚡ Bil Elektrik</th>
-                                <th>💧 Bil Air</th>
-                                <th>👥 Gaji Pekerja</th>
-                                <th>🧊 AIS</th>
-                                <th>📦 Stok / Lain-lain</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>${sewa}</td>
-                                <td>${elektrik}</td>
-                                <td>${air}</td>
-                                <td>${gaji}</td>
-                                <td>${ais}</td>
-                                <td>${lain}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- REKOD TRANSAKSI HARIAN (3 JADUAL) -->
-                    <div class="tables-flex">
-                        <div>
-                            <div class="sec-title">Rekod Total Sale</div>
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tarikh</th>
-                                        <th>Keterangan</th>
-                                        <th style="text-align: right;">RM</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${salesTableRows}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div>
-                            <div class="sec-title">Rekod Belanja</div>
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tarikh</th>
-                                        <th>Nota</th>
-                                        <th style="text-align: right;">RM</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${expenseTableRows}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div>
-                            <div class="sec-title">Cash Kedai</div>
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tarikh</th>
-                                        <th>Catatan</th>
-                                        <th style="text-align: right;">RM</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${cashShopTableRows}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- FOOTER & PENGESAHAN -->
-                    <div class="footer-bar">
-                        <div>
-                            <p style="margin: 0;">Laporan dijana secara automatik melalui sistem cloud sync.</p>
-                            <p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p>
-                        </div>
-                        <div class="sign-box">
-                            <div class="sign-line"></div>
-                            <span>Disahkan Oleh (Boss / Pengurusan)</span>
-                        </div>
-                    </div>
-
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                        };
-                    <\/script>
                 </body>
                 </html>
             `);
             printWindow.document.close();
         }
 
-        // ============================================================
-        // FUNGSI UMUM & UTILITI
-        // ============================================================
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
             toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 2500);
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
         }
 
-        function copyWhatsAppReport() {
-            const dateVal = document.getElementById('stockDate').value;
-            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Hari ini';
-
-            let reportMap = {};
-
-            const categories = window.stockCategories || window.defaultCategories;
-
-            Object.keys(categories).forEach(catName => {
-                reportMap[catName] = [];
-                (categories[catName] || []).forEach(itemObj => {
-                    const itemName = itemObj.name;
-                    const itemUnit = itemObj.unit || 'pcs';
-                    const itemTarget = itemObj.target !== undefined ? itemObj.target : 5;
-                    const currentQty = window.stockData[itemName] !== undefined ? window.stockData[itemName] : 5;
-
-                    reportMap[catName].push(`  • *${itemName}*: ${currentQty}/${itemTarget} ${itemUnit}`);
-                });
-            });
-
-            let message = `*📋 LAPORAN SEMAKAN STOK KEDAI*\n📅 Tarikh: ${formattedDate}\n🎯 Limit Stok: Custom (1 - 2000 pcs)\n\n`;
-
-            Object.keys(reportMap).forEach(catName => {
-                if (reportMap[catName].length > 0) {
-                    message += `*${catName}*\n` + reportMap[catName].join('\n') + `\n\n`;
-                }
-            });
-
-            navigator.clipboard.writeText(message).then(() => {
-                showToast("Laporan WhatsApp berjaya disalin!");
-            }).catch(() => {
-                alert("Gagal menyalin. Sila salin secara manual.");
-            });
-        }
-
-        function resetStock() {
-            if (currentRole !== 'staff') return;
-            if (confirm("Reset semua baki semasa item kepada nilai default (5)?")) {
-                const categories = window.stockCategories || window.defaultCategories;
-                Object.values(categories).flat().forEach(itemObj => {
-                    window.stockData[itemObj.name] = 5;
-                });
-                saveMasterStockToFirebase();
-                renderStockTable();
-                showToast("Baki semasa telah direset ke 5");
-            }
-        }
-
-        // ============================================================
-        // PELAKSANAAN AWAL (INITIALIZATION)
-        // ============================================================
-        const stockDateInput = document.getElementById('stockDate');
-        stockDateInput.value = today.toISOString().split('T')[0];
-
-        // Jalankan listener baki berterusan (Master Stock)
+        // Jalankan Semakan Kebenaran Akses/Peranan & Init Realtime
+        applyRoleUI();
         initMasterStockListener();
-
-        // Tukar tarikh untuk tujuan simpanan snapshot harian (baki stok tidak akan di-reset)
-        stockDateInput.addEventListener('change', () => {
-            saveMasterStockToFirebase();
-        });
-
-        document.getElementById('btnWhatsapp').addEventListener('click', copyWhatsAppReport);
-        document.getElementById('btnReset').addEventListener('click', resetStock);
-
-        document.getElementById('btnAddSyrup').addEventListener('click', () => {
-            if (currentRole !== 'staff') return;
-            const input = document.getElementById('newSyrupName');
-            const catSelect = document.getElementById('newSyrupCategory');
-            const unitSelect = document.getElementById('newSyrupUnit');
-            const targetInput = document.getElementById('newSyrupTarget');
-
-            const name = input.value.trim();
-            const catName = catSelect.value;
-            const unitName = unitSelect.value;
-            let targetVal = parseInt(targetInput.value) || 5;
-            if (targetVal < 1) targetVal = 1;
-            if (targetVal > 2000) targetVal = 2000;
-
-            if (!window.stockCategories[catName]) {
-                window.stockCategories[catName] = [];
-            }
-
-            const allItems = Object.values(window.stockCategories).flat().map(i => i.name);
-
-            if (name && !allItems.includes(name)) {
-                window.stockCategories[catName].push({ name: name, unit: unitName, target: targetVal });
-                window.stockData[name] = 5;
-                
-                saveCatalogToFirebase();
-                saveMasterStockToFirebase();
-                
-                renderStockTable();
-                input.value = '';
-                showToast(`"${name}" (${unitName}, Limit: ${targetVal}) ditambah ke ${catName}`);
-            } else if (allItems.includes(name)) {
-                showToast('Item sudah wujud dalam senarai');
-            } else {
-                showToast('Sila masukkan nama item');
-            }
-        });
-
-        document.getElementById('newSyrupName').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('btnAddSyrup').click();
-            }
-        });
-
-        if (!currentRole) {
-            openLoginModal();
-        } else {
-            applyRoleUI();
-        }
     </script>
 </body>
 </html>
