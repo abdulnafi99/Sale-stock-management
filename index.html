@@ -476,7 +476,7 @@
 
             <!-- Modal Body (Scrollable) -->
             <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
-                <!-- BARIAN CARIAN STOK (SEARCH FEATURE BARU) -->
+                <!-- BARIAN CARIAN STOK -->
                 <div class="relative">
                     <input type="text" id="stockSearchInput" oninput="renderStockTable()" placeholder="🔍 Cari nama item atau bahan (cth: Susu, Vanilla, Cawan, Matcha)..." class="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-2xs">
                     <button onclick="clearStockSearch()" title="Padam Carian" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center bg-slate-100">✕</button>
@@ -541,7 +541,7 @@
                         <input type="number" id="newSyrupTarget" min="1" max="2000" value="5" class="w-16 h-8 text-center font-bold text-blue-600 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400">
                     </div>
 
-                    <button id="btnAddSyrup" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm active:scale-95">Tambah Item</button>
+                    <button id="btnAddSyrup" onclick="addNewSyrupItem()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm active:scale-95">Tambah Item</button>
                 </div>
             </div>
 
@@ -552,6 +552,7 @@
         </div>
     </div>
 
+    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm hidden z-50">✅ Disalin!</div>
 
     <!-- ======== JAVASCRIPT ======== -->
@@ -670,7 +671,7 @@
         }
 
         // ============================================================
-        // MODAL CASH KEDAI (ANIMASI & POPUP)
+        // MODAL CASH KEDAI
         // ============================================================
         function openCashShopModal() {
             if (currentRole === 'boss') {
@@ -906,6 +907,7 @@
         document.getElementById('saleDate').valueAsDate = today;
         document.getElementById('expDate').valueAsDate = today;
         document.getElementById('cashShopDateModal').valueAsDate = today;
+        document.getElementById('stockDate').valueAsDate = today;
         document.getElementById('filterMonth').value = today.toISOString().slice(0, 7);
 
         db.ref('sales').on('value', (snapshot) => {
@@ -966,7 +968,6 @@
         window.stockCategories = JSON.parse(JSON.stringify(window.defaultCategories));
         window.stockData = {};
 
-        // 1. Muat turun Katalog Item
         db.ref('inventoryCatalog').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -980,13 +981,14 @@
             renderStockTable();
         });
 
-        // 2. Listener Utama Baki Stok Berterusan (Master Stock)
         function initMasterStockListener() {
             const cloudStatus = document.getElementById('cloudStatus');
             const triggerStatus = document.getElementById('triggerCloudStatus');
 
-            cloudStatus.innerText = '🔄 Menyegerak...';
-            cloudStatus.className = 'text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-full';
+            if (cloudStatus) {
+                cloudStatus.innerText = '🔄 Menyegerak...';
+                cloudStatus.className = 'text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-full';
+            }
             if (triggerStatus) triggerStatus.innerText = '🔄 Menyegerak...';
 
             db.ref('inventoryStock').on('value', (snapshot) => {
@@ -994,7 +996,6 @@
                 if (data) {
                     window.stockData = data;
                 } else {
-                    // Jika data belum wujud langsung di Cloud, baru beri nilai asas 5
                     window.stockData = {};
                     Object.values(window.stockCategories).flat().forEach(itemObj => {
                         window.stockData[itemObj.name] = 5;
@@ -1003,14 +1004,18 @@
                         saveMasterStockToFirebase();
                     }
                 }
-                cloudStatus.innerText = '☁️ Tersimpan ke Firebase';
-                cloudStatus.className = 'text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full';
+                if (cloudStatus) {
+                    cloudStatus.innerText = '☁️ Tersimpan ke Firebase';
+                    cloudStatus.className = 'text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full';
+                }
                 if (triggerStatus) triggerStatus.innerText = '☁️ Tersimpan ke Firebase';
                 renderStockTable();
             }, (error) => {
                 console.error('Master stock listener error:', error);
-                cloudStatus.innerText = '❌ Gagal sambung';
-                cloudStatus.className = 'text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full';
+                if (cloudStatus) {
+                    cloudStatus.innerText = '❌ Gagal sambung';
+                    cloudStatus.className = 'text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full';
+                }
                 if (triggerStatus) triggerStatus.innerText = '❌ Gagal';
             });
         }
@@ -1042,7 +1047,6 @@
             db.ref('inventoryCatalog').set(window.stockCategories).catch(err => console.error('Save catalog error:', err));
         }
 
-        // Simpan Baki Stok Utama Ke Cloud & Snapshot Tarikh Pilihan
         function saveMasterStockToFirebase() {
             if (currentRole !== 'staff') return;
             db.ref('inventoryStock').set(window.stockData).catch(err => console.error('Save master stock error:', err));
@@ -1056,8 +1060,42 @@
             }
         }
 
+        function addNewSyrupItem() {
+            if (currentRole !== 'staff') return;
+            const category = document.getElementById('newSyrupCategory').value;
+            const name = document.getElementById('newSyrupName').value.trim();
+            const unit = document.getElementById('newSyrupUnit').value;
+            const target = parseInt(document.getElementById('newSyrupTarget').value) || 5;
+
+            if (!name) {
+                showToast("⚠️ Sila masukkan nama item!");
+                return;
+            }
+
+            if (!window.stockCategories[category]) {
+                window.stockCategories[category] = [];
+            }
+
+            const exists = window.stockCategories[category].some(i => i.name.toLowerCase() === name.toLowerCase());
+            if (exists) {
+                showToast("⚠️ Item ini sudah wujud!");
+                return;
+            }
+
+            window.stockCategories[category].push({ name, unit, target });
+            window.stockData[name] = target;
+
+            saveCatalogToFirebase();
+            saveMasterStockToFirebase();
+            renderStockTable();
+
+            document.getElementById('newSyrupName').value = '';
+            showToast(`Item "${name}" berjaya ditambah!`);
+        }
+
         function renderStockTable() {
             const tbody = document.getElementById('syrupTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
             const isBoss = (currentRole === 'boss');
             const searchQuery = (document.getElementById('stockSearchInput')?.value || '').toLowerCase().trim();
@@ -1074,7 +1112,7 @@
                     itemObj.name.toLowerCase().includes(searchQuery) || catName.toLowerCase().includes(searchQuery)
                 );
 
-                if (items.length === 0) return; // Abaikan kategori jika tiada padanan
+                if (items.length === 0) return;
 
                 totalMatchesFound += items.length;
 
@@ -1091,7 +1129,6 @@
                     const itemName = itemObj.name;
                     const itemUnit = itemObj.unit || 'pcs';
                     const itemTarget = itemObj.target !== undefined ? itemObj.target : 5;
-
                     const currentQty = window.stockData[itemName] !== undefined ? window.stockData[itemName] : 5;
 
                     let statusClass = 'status-full';
@@ -1318,14 +1355,9 @@
         function renderFinance() {
             const selectedMonth = document.getElementById('filterMonth').value;
             
-            // Variabel Jualan
             let totalSalesMonth = 0;
-
-            // Variabel Perbelanjaan
             let expCashTotal = 0, expQRTotal = 0, expTnGTot = 0;
             let catSewaTotal = 0, catElektrikTotal = 0, catAirTotal = 0, catGajiTotal = 0, catAisTotal = 0, catLainTotal = 0;
-            
-            // Variabel Cash Kedai
             let totalCashShopMonth = 0;
 
             const isBoss = (currentRole === 'boss');
@@ -1431,24 +1463,17 @@
             const totalDeduction = catSewaTotal + catElektrikTotal + catAirTotal + catGajiTotal + catAisTotal + catLainTotal;
             const netProfit = totalSalesMonth - totalDeduction;
 
-            // Kemaskini Kad Total Sale
             document.getElementById('sumTotalSales').innerText = `RM ${totalSalesMonth.toFixed(2)}`;
-
-            // Kemaskini Kad TOTAL CASH DI KEDAI
             document.getElementById('sumNetCash').innerText = `RM ${totalCashShopMonth.toFixed(2)}`;
-
-            // Kemaskini Kad Kos / Belanja
             document.getElementById('sumTotalDeduction').innerText = `RM ${totalDeduction.toFixed(2)}`;
             document.getElementById('sumExpCash').innerText = `RM ${expCashTotal.toFixed(0)}`;
             document.getElementById('sumExpQR').innerText = `RM ${expQRTotal.toFixed(0)}`;
             document.getElementById('sumExpTnG').innerText = `RM ${expTnGTot.toFixed(0)}`;
 
-            // Kemaskini Untung Bersih
             const netElement = document.getElementById('sumNetProfit');
             netElement.innerText = `RM ${netProfit.toFixed(2)}`;
             netElement.className = `text-2xl font-bold mt-1 ${netProfit >= 0 ? 'text-sky-400' : 'text-rose-400'}`;
 
-            // Pecahan Kategori Belanja
             document.getElementById('catSewa').innerText = `RM ${catSewaTotal.toFixed(2)}`;
             document.getElementById('catElektrik').innerText = `RM ${catElektrikTotal.toFixed(2)}`;
             document.getElementById('catAir').innerText = `RM ${catAirTotal.toFixed(2)}`;
@@ -1690,7 +1715,7 @@
         }
 
         // ============================================================
-        // FUNGSI CETAK PDF LAPORAN KEWANGAN (TELAH DIKEMAS KINI DENGAN FULL DATA)
+        // FUNGSI CETAK PDF LAPORAN KEWANGAN
         // ============================================================
         function downloadPDF() {
             const selectedMonth = document.getElementById('filterMonth').value;
@@ -1712,13 +1737,11 @@
 
             const expCash = document.getElementById('sumExpCash').innerText;
             const expQR = document.getElementById('sumExpQR').innerText;
-            const expTnG = document.getElementById('sumExpTnG').innerText;
 
             const monthSales = sales.filter(s => s.date && s.date.startsWith(selectedMonth));
             const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
             const monthCashShop = cashInShop.filter(c => c.date && c.date.startsWith(selectedMonth));
 
-            // Generate Jadual Sejarah Jualan
             let salesTableRows = monthSales.map(s => `
                 <tr>
                     <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.date}</td>
@@ -1731,7 +1754,6 @@
                 salesTableRows = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod jualan bagi bulan ini</td></tr>`;
             }
 
-            // Generate Jadual Resit & Perbelanjaan
             let expenseTableRows = monthExpenses.map(e => `
                 <tr>
                     <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.date}</td>
@@ -1745,7 +1767,6 @@
                 expenseTableRows = `<tr><td colspan="4" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
             }
 
-            // Generate Jadual Cash Kedai (Duit Tinggal & Duit Keluar)
             let cashShopTableRows = monthCashShop.map(c => {
                 const isOut = (c.type === 'out');
                 const signStr = isOut ? '-' : '+';
@@ -1810,7 +1831,6 @@
                             font-size: 11px; 
                             text-align: center;
                         }
-                        
                         .summary-grid { 
                             display: grid; 
                             grid-template-columns: repeat(4, 1fr); 
@@ -1839,7 +1859,6 @@
                         .text-amber { color: #d97706; }
                         .text-rose { color: #dc2626; }
                         .text-sky { color: #0284c7; }
-
                         .section-title {
                             font-size: 11px;
                             font-weight: 800;
@@ -1850,14 +1869,12 @@
                             margin-bottom: 6px;
                             text-transform: uppercase;
                         }
-
                         .data-table {
                             width: 100%;
                             border-collapse: collapse;
                             font-size: 9.5px;
                             margin-bottom: 12px;
                         }
-
                         .data-table th {
                             background: #0f172a;
                             color: #ffffff;
@@ -1867,7 +1884,6 @@
                             text-transform: uppercase;
                             font-size: 8.5px;
                         }
-
                         .footer-bar { 
                             display: flex; 
                             justify-content: space-between; 
@@ -1900,7 +1916,6 @@
                         </div>
                     </div>
 
-                    <!-- RINGKASAN UTAMA -->
                     <div class="summary-grid">
                         <div class="card">
                             <div class="card-label">Jumlah Jualan</div>
@@ -1923,7 +1938,6 @@
                         </div>
                     </div>
 
-                    <!-- JADUAL TERPERINCI 1: JUALAN HARIAN -->
                     <div class="section-title">📋 Rekod Jualan Harian (Total Sale)</div>
                     <table class="data-table">
                         <thead>
@@ -1938,7 +1952,6 @@
                         </tbody>
                     </table>
 
-                    <!-- JADUAL TERPERINCI 2: PERBELANJAAN & RESIT -->
                     <div class="section-title">🧾 Rekod Resit & Perbelanjaan</div>
                     <table class="data-table">
                         <thead>
@@ -1954,7 +1967,6 @@
                         </tbody>
                     </table>
 
-                    <!-- JADUAL TERPERINCI 3: CASH KEDAI (DUIT TINGGAL & DUIT KELUAR) -->
                     <div class="section-title">🏪 Rekod Cash Kedai (Duit Tinggal & Duit Keluar)</div>
                     <table class="data-table">
                         <thead>
@@ -1991,8 +2003,12 @@
             printWindow.document.close();
         }
 
+        // ============================================================
+        // FUNGSI UTILITI (NOTIFIKASI, WHATSAPP & RESET STOK)
+        // ============================================================
         function showToast(msg) {
             const toast = document.getElementById('toast');
+            if (!toast) return;
             toast.innerText = msg;
             toast.classList.remove('hidden');
             setTimeout(() => {
@@ -2000,9 +2016,72 @@
             }, 3000);
         }
 
-        // Jalankan Semakan Kebenaran Akses/Peranan & Init Realtime
-        applyRoleUI();
-        initMasterStockListener();
+        function copyWhatsappReport() {
+            const dateVal = document.getElementById('stockDate').value;
+            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Hari Ini';
+            
+            let msg = `📋 *LAPORAN SEMAKAN STOK KEDAI*\n📅 Tarikh: ${formattedDate}\n-----------------------------------\n`;
+            
+            const categories = window.stockCategories || window.defaultCategories;
+
+            Object.keys(categories).forEach(cat => {
+                const items = categories[cat] || [];
+                let catStr = `\n*${cat}*:\n`;
+                let itemStr = '';
+                items.forEach(itemObj => {
+                    const qty = window.stockData[itemObj.name] !== undefined ? window.stockData[itemObj.name] : 5;
+                    const target = itemObj.target || 5;
+                    let statusIcon = '✅';
+                    if (qty === 0) {
+                        statusIcon = '🚨 [HABIS]';
+                    } else if (qty < target) {
+                        statusIcon = '⚠️ [RENDAH]';
+                    }
+                    itemStr += `• ${itemObj.name}: ${qty} ${itemObj.unit || 'pcs'} (Limit: ${target}) ${statusIcon}\n`;
+                });
+                if (itemStr) msg += catStr + itemStr;
+            });
+
+            navigator.clipboard.writeText(msg).then(() => {
+                showToast("✅ Laporan WhatsApp Disalin!");
+            }).catch(err => {
+                console.error("Gagal salin:", err);
+                showToast("❌ Gagal menyalin laporan");
+            });
+        }
+
+        function resetAllStock() {
+            if (currentRole !== 'staff') return;
+            if (confirm("Reset semua baki stok kepada 5?")) {
+                Object.keys(window.stockData).forEach(key => {
+                    window.stockData[key] = 5;
+                });
+                saveMasterStockToFirebase();
+                renderStockTable();
+                showToast("Baki stok telah direset kepada 5!");
+            }
+        }
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', () => {
+            initMasterStockListener();
+            
+            if (!currentRole) {
+                openLoginModal();
+            } else {
+                applyRoleUI();
+            }
+
+            const btnWhatsapp = document.getElementById('btnWhatsapp');
+            if (btnWhatsapp) {
+                btnWhatsapp.addEventListener('click', copyWhatsappReport);
+            }
+
+            const btnReset = document.getElementById('btnReset');
+            if (btnReset) {
+                btnReset.addEventListener('click', resetAllStock);
+            }
+        });
     </script>
 </body>
 </html>
