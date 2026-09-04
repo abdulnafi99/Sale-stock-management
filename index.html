@@ -557,6 +557,16 @@
 
     <!-- ======== JAVASCRIPT ======== -->
     <script>
+        // Function Toast untuk notifikasi
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (toast) {
+                toast.innerText = msg;
+                toast.classList.remove('hidden');
+                setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+            }
+        }
+
         // ============================================================
         // KONFIGURASI FIREBASE
         // ============================================================
@@ -669,6 +679,16 @@
             renderStockTable();
             initChatSystem();
         }
+
+        // Auto Open Login jika belum login
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!currentRole) {
+                openLoginModal();
+            } else {
+                applyRoleUI();
+            }
+            initMasterStockListener();
+        });
 
         // ============================================================
         // MODAL CASH KEDAI
@@ -1060,6 +1080,31 @@
             }
         }
 
+        // ============================================================
+        // FUNGSI UBAH KEDUKAN ITEM (UP & DOWN)
+        // ============================================================
+        function moveItemUp(category, index) {
+            if (currentRole !== 'staff') return;
+            if (index <= 0) return; // Dah paling atas
+            const list = window.stockCategories[category];
+            const temp = list[index];
+            list[index] = list[index - 1];
+            list[index - 1] = temp;
+            saveCatalogToFirebase();
+            renderStockTable();
+        }
+
+        function moveItemDown(category, index) {
+            if (currentRole !== 'staff') return;
+            const list = window.stockCategories[category];
+            if (index >= list.length - 1) return; // Dah paling bawah
+            const temp = list[index];
+            list[index] = list[index + 1];
+            list[index + 1] = temp;
+            saveCatalogToFirebase();
+            renderStockTable();
+        }
+
         function addNewSyrupItem() {
             if (currentRole !== 'staff') return;
             const category = document.getElementById('newSyrupCategory').value;
@@ -1108,24 +1153,28 @@
             let totalMatchesFound = 0;
 
             Object.keys(categories).forEach((catName) => {
-                const items = (categories[catName] || []).filter(itemObj => 
+                const rawItems = categories[catName] || [];
+                // Kita kekalkan indeks asal supaya susunan up/down tepat
+                const itemsWithIndex = rawItems.map((itemObj, index) => ({ itemObj, index }));
+                
+                const filteredItems = itemsWithIndex.filter(({ itemObj }) => 
                     itemObj.name.toLowerCase().includes(searchQuery) || catName.toLowerCase().includes(searchQuery)
                 );
 
-                if (items.length === 0) return;
+                if (filteredItems.length === 0) return;
 
-                totalMatchesFound += items.length;
+                totalMatchesFound += filteredItems.length;
 
                 const catHeaderTr = document.createElement('tr');
                 catHeaderTr.className = "bg-slate-100/90 font-bold text-slate-800 text-xs tracking-wide uppercase border-y border-slate-200";
                 catHeaderTr.innerHTML = `
                     <td colspan="${isBoss ? '4' : '5'}" class="py-2.5 px-4 bg-slate-200/50 text-slate-900 font-bold">
-                        ${catName} (${items.length} item)
+                        ${catName} (${filteredItems.length} item)
                     </td>
                 `;
                 tbody.appendChild(catHeaderTr);
 
-                items.forEach((itemObj) => {
+                filteredItems.forEach(({ itemObj, index }) => {
                     const itemName = itemObj.name;
                     const itemUnit = itemObj.unit || 'pcs';
                     const itemTarget = itemObj.target !== undefined ? itemObj.target : 5;
@@ -1145,9 +1194,17 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50/80 transition-colors";
 
+                    const isFirst = (index === 0);
+                    const isLast = (index === rawItems.length - 1);
+
                     const actionTd = isBoss ? '' : `
                         <td class="py-2.5 px-4 text-center col-action">
-                            <button class="btn-delete-syrup text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-100 font-medium transition-colors" data-syrup="${itemName}" data-cat="${catName}">Padam</button>
+                            <div class="flex items-center justify-center gap-1">
+                                <!-- Butang Susun Kedudukan -->
+                                <button onclick="moveItemUp('${catName}', ${index})" ${isFirst ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Naikkan">⬆️</button>
+                                <button onclick="moveItemDown('${catName}', ${index})" ${isLast ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Turunkan">⬇️</button>
+                                <button class="btn-delete-syrup text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-100 font-medium transition-colors ml-1" data-syrup="${itemName}" data-cat="${catName}">Padam</button>
+                            </div>
                         </td>
                     `;
 
@@ -1988,7 +2045,7 @@
                         </div>
                         <div class="sign-box">
                             <div class="sign-line"></div>
-                            <span>Disahkan Oleh (Boss / Staff)</span>
+                            <span>Disahkan Oleh (Staff / Boss)</span>
                         </div>
                     </div>
 
@@ -2002,86 +2059,6 @@
             `);
             printWindow.document.close();
         }
-
-        // ============================================================
-        // FUNGSI UTILITI (NOTIFIKASI, WHATSAPP & RESET STOK)
-        // ============================================================
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            if (!toast) return;
-            toast.innerText = msg;
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
-        }
-
-        function copyWhatsappReport() {
-            const dateVal = document.getElementById('stockDate').value;
-            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Hari Ini';
-            
-            let msg = `📋 *LAPORAN SEMAKAN STOK KEDAI*\n📅 Tarikh: ${formattedDate}\n-----------------------------------\n`;
-            
-            const categories = window.stockCategories || window.defaultCategories;
-
-            Object.keys(categories).forEach(cat => {
-                const items = categories[cat] || [];
-                let catStr = `\n*${cat}*:\n`;
-                let itemStr = '';
-                items.forEach(itemObj => {
-                    const qty = window.stockData[itemObj.name] !== undefined ? window.stockData[itemObj.name] : 5;
-                    const target = itemObj.target || 5;
-                    let statusIcon = '✅';
-                    if (qty === 0) {
-                        statusIcon = '🚨 [HABIS]';
-                    } else if (qty < target) {
-                        statusIcon = '⚠️ [RENDAH]';
-                    }
-                    itemStr += `• ${itemObj.name}: ${qty} ${itemObj.unit || 'pcs'} (Limit: ${target}) ${statusIcon}\n`;
-                });
-                if (itemStr) msg += catStr + itemStr;
-            });
-
-            navigator.clipboard.writeText(msg).then(() => {
-                showToast("✅ Laporan WhatsApp Disalin!");
-            }).catch(err => {
-                console.error("Gagal salin:", err);
-                showToast("❌ Gagal menyalin laporan");
-            });
-        }
-
-        function resetAllStock() {
-            if (currentRole !== 'staff') return;
-            if (confirm("Reset semua baki stok kepada 5?")) {
-                Object.keys(window.stockData).forEach(key => {
-                    window.stockData[key] = 5;
-                });
-                saveMasterStockToFirebase();
-                renderStockTable();
-                showToast("Baki stok telah direset kepada 5!");
-            }
-        }
-
-        // INITIALIZATION
-        document.addEventListener('DOMContentLoaded', () => {
-            initMasterStockListener();
-            
-            if (!currentRole) {
-                openLoginModal();
-            } else {
-                applyRoleUI();
-            }
-
-            const btnWhatsapp = document.getElementById('btnWhatsapp');
-            if (btnWhatsapp) {
-                btnWhatsapp.addEventListener('click', copyWhatsappReport);
-            }
-
-            const btnReset = document.getElementById('btnReset');
-            if (btnReset) {
-                btnReset.addEventListener('click', resetAllStock);
-            }
-        });
     </script>
 </body>
 </html>
