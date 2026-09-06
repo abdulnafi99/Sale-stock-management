@@ -598,12 +598,24 @@
         const firestore = firebase.firestore();
 
         // ============================================================
-        // BOSS EMAIL (tukar ke emel boss yang sebenar)
+        // BOSS EMAIL (tetap)
         // ============================================================
-        const BOSS_EMAIL = 'boss@kedai.com'; // <-- Tukar ke emel boss
+        const BOSS_EMAIL = 'Boss@selagicoffee.com'; // Emel Boss tetap
 
         let currentRole = sessionStorage.getItem('user_role') || null;
         let currentUserEmail = sessionStorage.getItem('user_email') || null;
+
+        // ============================================================
+        // FUNGSI SIMPAN PERANAN KE REALTIME DATABASE
+        // ============================================================
+        function saveRoleToRTDB(uid, role, displayName, email) {
+            db.ref('users/' + uid).set({
+                role: role,
+                displayName: displayName,
+                email: email,
+                updatedAt: new Date().toISOString()
+            }).catch(err => console.error('Gagal simpan role ke RTDB:', err));
+        }
 
         // ============================================================
         // FUNGSI TOGGLE PASSWORD VISIBILITY
@@ -688,7 +700,6 @@
             auth.signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    // Tentukan peranan
                     determineAndSetRole(user, email);
                 })
                 .catch((error) => {
@@ -729,18 +740,19 @@
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    // Default role: staff (kecuali jika emel = boss email)
                     let role = 'staff';
                     if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
                         role = 'boss';
                     }
-                    // Simpan ke Firestore
                     return firestore.collection('users').doc(user.uid).set({
                         role: role,
                         displayName: name,
                         email: email,
                         createdAt: new Date().toISOString()
                     }).then(() => {
+                        // Simpan ke Realtime Database juga
+                        saveRoleToRTDB(user.uid, role, name, email);
+
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', name);
                         sessionStorage.setItem('user_email', email);
@@ -763,9 +775,8 @@
                 });
         }
 
-        // Tentukan role berdasarkan emel & Firestore
+        // Tentukan role berdasarkan emel & Firestore, kemudian simpan ke RTDB
         function determineAndSetRole(user, email) {
-            // Semak Firestore untuk peranan
             firestore.collection('users').doc(user.uid).get()
                 .then((doc) => {
                     let role = 'staff';
@@ -774,13 +785,11 @@
                     if (doc.exists) {
                         role = doc.data().role || 'staff';
                         displayName = doc.data().displayName || user.displayName || email;
-                        // Jika emel adalah boss email, pastikan role = boss
                         if (email.toLowerCase() === BOSS_EMAIL.toLowerCase() && role !== 'boss') {
                             role = 'boss';
                             firestore.collection('users').doc(user.uid).update({ role: 'boss' });
                         }
                     } else {
-                        // Pengguna baru: tentukan role berdasarkan email
                         if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
                             role = 'boss';
                         } else {
@@ -794,6 +803,9 @@
                         });
                     }
 
+                    // Simpan ke Realtime Database
+                    saveRoleToRTDB(user.uid, role, displayName, email);
+
                     sessionStorage.setItem('user_role', role);
                     sessionStorage.setItem('user_name', displayName);
                     sessionStorage.setItem('user_email', email);
@@ -805,9 +817,10 @@
                 })
                 .catch((err) => {
                     console.error('Ralat baca Firestore:', err);
-                    // Fallback: gunakan email untuk tentukan role
                     let role = 'staff';
                     if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) role = 'boss';
+                    // Fallback: simpan ke RTDB
+                    saveRoleToRTDB(user.uid, role, user.displayName || email, email);
                     sessionStorage.setItem('user_role', role);
                     sessionStorage.setItem('user_name', user.displayName || email);
                     sessionStorage.setItem('user_email', email);
@@ -840,7 +853,6 @@
         // ============================================================
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // Pengguna sudah log masuk
                 const email = user.email || '';
                 firestore.collection('users').doc(user.uid).get()
                     .then((doc) => {
@@ -850,7 +862,6 @@
                         if (doc.exists) {
                             role = doc.data().role || 'staff';
                             displayName = doc.data().displayName || user.displayName || email;
-                            // Pastikan boss email set role boss
                             if (email.toLowerCase() === BOSS_EMAIL.toLowerCase() && role !== 'boss') {
                                 role = 'boss';
                                 firestore.collection('users').doc(user.uid).update({ role: 'boss' });
@@ -868,6 +879,9 @@
                                 createdAt: new Date().toISOString()
                             });
                         }
+                        // Simpan ke Realtime Database
+                        saveRoleToRTDB(user.uid, role, displayName, email);
+
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', displayName);
                         sessionStorage.setItem('user_email', email);
@@ -878,9 +892,9 @@
                     })
                     .catch((err) => {
                         console.error('Ralat baca Firestore (onAuth):', err);
-                        // Fallback
                         let role = 'staff';
                         if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) role = 'boss';
+                        saveRoleToRTDB(user.uid, role, user.displayName || email, email);
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', user.displayName || email);
                         sessionStorage.setItem('user_email', email);
@@ -890,11 +904,9 @@
                         applyRoleUI();
                     });
             } else {
-                // Tiada pengguna, buka modal login jika tiada role dalam session
                 if (!sessionStorage.getItem('user_role')) {
                     openLoginModal();
                 } else {
-                    // Kadang-kadang auth state hilang tapi session masih ada, semak semula
                     const storedRole = sessionStorage.getItem('user_role');
                     if (storedRole) {
                         currentRole = storedRole;
@@ -907,7 +919,7 @@
         });
 
         // ============================================================
-        // APPLY ROLE UI
+        // APPLY ROLE UI (sama seperti asal)
         // ============================================================
         function applyRoleUI() {
             const userName = sessionStorage.getItem('user_name') || 'Pengguna';
@@ -927,7 +939,6 @@
                 if (chatHeaderSub) chatHeaderSub.innerText = "Mod Boss: Hantar arahan atau maklum balas ke Staff";
 
                 document.querySelectorAll('.staff-only').forEach(el => el.classList.add('hidden'));
-                // Sembunyikan butang padam dan tambah di jadual
                 document.querySelectorAll('.col-action').forEach(el => el.style.display = 'none');
             } else {
                 roleBadge.innerHTML = `👤 ${userName}`;
@@ -948,7 +959,7 @@
         }
 
         // ============================================================
-        // MODAL CASH KEDAI
+        // MODAL CASH KEDAI (sama)
         // ============================================================
         function openCashShopModal() {
             if (currentRole === 'boss') {
@@ -982,7 +993,7 @@
         });
 
         // ============================================================
-        // SISTEM CHAT
+        // SISTEM CHAT (sama)
         // ============================================================
         let isChatOpen = false;
         let chatMessages = [];
@@ -1129,7 +1140,7 @@
         }
 
         // ============================================================
-        // MODAL STOCKTAKE
+        // MODAL STOCKTAKE (sama)
         // ============================================================
         function openStockModal() {
             const modal = document.getElementById('stockModal');
@@ -1175,7 +1186,7 @@
         });
 
         // ============================================================
-        // KEWANGAN & CASH KEDAI
+        // KEWANGAN & CASH KEDAI (sama)
         // ============================================================
         let sales = [];
         let expenses = [];
@@ -1207,7 +1218,7 @@
         });
 
         // ============================================================
-        // STOCKTAKE: BAKI BERTERUSAN
+        // STOCKTAKE: BAKI BERTERUSAN (sama)
         // ============================================================
         window.defaultCategories = {
             "🥛 Susu Farm Fresh": [
@@ -1338,7 +1349,7 @@
         }
 
         // ============================================================
-        // FUNGSI UBAH KEDUDUKAN ITEM
+        // FUNGSI UBAH KEDUDUKAN ITEM (sama)
         // ============================================================
         function moveItemUp(category, index) {
             if (currentRole !== 'staff') return;
@@ -1586,7 +1597,7 @@
         }
 
         // ============================================================
-        // FUNGSI KEWANGAN
+        // FUNGSI KEWANGAN (sama)
         // ============================================================
         function addSales(e) {
             e.preventDefault();
@@ -1777,7 +1788,7 @@
         }
 
         // ============================================================
-        // FUNGSI CETAK PDF LAPORAN STOK
+        // FUNGSI CETAK PDF LAPORAN STOK (sama)
         // ============================================================
         function downloadStockPDF() {
             const dateVal = document.getElementById('stockDate').value;
@@ -1880,7 +1891,7 @@
         }
 
         // ============================================================
-        // FUNGSI CETAK PDF LAPORAN KEWANGAN
+        // FUNGSI CETAK PDF LAPORAN KEWANGAN (sama)
         // ============================================================
         function downloadPDF() {
             const selectedMonth = document.getElementById('filterMonth').value;
@@ -1990,4 +2001,4 @@
     </script>
 </body>
 </html>
-`
+```
