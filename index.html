@@ -1,17 +1,23 @@
+
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistem Urus Niaga & Stocktake (Cloud Sync)</title>
+    <title>Sistem Urus Niaga & Stocktake (Email Login)</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <!-- Firebase v9 compat -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+    </script>
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -68,14 +74,49 @@
         .bg-slate-800\/60 {
             background: rgba(30, 41, 59, 0.6);
         }
-
-        /* Animasi Khas Chat Popup & Modals */
         @keyframes popIn {
-            0% { transform: scale(0.8) translateY(20px); opacity: 0; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
+            0% {
+                transform: scale(0.8) translateY(20px);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
         }
         .animate-pop-in {
             animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Toggle password visibility */
+        .toggle-pwd {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Login/Register tab style */
+        .auth-tab {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .auth-tab.active {
+            border-bottom: 3px solid #0f172a;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .auth-tab.inactive {
+            color: #94a3b8;
+            border-bottom: 3px solid transparent;
+        }
+        .auth-tab.inactive:hover {
+            color: #475569;
+            border-bottom: 3px solid #cbd5e1;
+        }
+        .auth-panel {
+            display: none;
+        }
+        .auth-panel.active {
+            display: block;
         }
     </style>
 </head>
@@ -91,9 +132,8 @@
                     <p class="text-xs text-slate-500">Auto-Sync Cloud + Stocktake Bahan, Powder & Packaging</p>
                 </div>
             </div>
-            
+
             <div class="flex flex-wrap items-center gap-2">
-                <!-- Status Peranan / User -->
                 <span id="roleBadge" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center gap-1 shadow-2xs">
                     👤 Staff
                 </span>
@@ -103,13 +143,11 @@
                     <input type="month" id="filterMonth" onchange="renderFinance()" class="bg-white text-xs font-medium text-slate-700 py-1 px-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
 
-                <!-- Butang Buka Chat/Mesej di Navbar -->
                 <button onclick="toggleChatModal()" class="relative text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 border border-indigo-200 transition-all flex items-center gap-1.5">
                     💬 Mesej
                     <span id="unreadBadgeNav" class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-bounce">0</span>
                 </button>
 
-                <!-- Butang Log Keluar -->
                 <button onclick="handleLogout()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200 transition-all flex items-center gap-1">
                     🚪 Log Keluar
                 </button>
@@ -131,9 +169,8 @@
             <span class="text-xs font-bold bg-amber-200/80 px-2.5 py-1 rounded-lg">Semakan Sahaja</span>
         </div>
 
-        <!-- KAD TRIGGER SEMAKAN STOK & PETI TUNAI (RINGKAS) -->
+        <!-- KAD TRIGGER SEMAKAN STOK & PETI TUNAI -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Kad 1: Trigger Stocktake -->
             <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-md border border-blue-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -148,7 +185,6 @@
                 </button>
             </div>
 
-            <!-- Kad 2: Trigger Cash Kedai Modal -->
             <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-5 shadow-md border border-amber-400 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
@@ -164,7 +200,7 @@
             </div>
         </div>
 
-        <!-- Borang Input Kemas (2 Ruang Utama) -->
+        <!-- Borang Input Kemas (Staff sahaja) -->
         <div id="formsSection" class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Borang 1: Jualan -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 sm:p-6">
@@ -241,7 +277,7 @@
                 </div>
             </div>
 
-            <!-- Sejarah Cash Kedai (Tinggal & Keluar) -->
+            <!-- Sejarah Cash Kedai -->
             <div class="bg-white rounded-2xl shadow-xs border border-amber-200 p-5">
                 <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span class="text-amber-800">🏪 Sejarah Cash Kedai</span><span id="cashShopCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
@@ -259,9 +295,8 @@
                 <div><h2 class="text-xl font-bold tracking-tight flex items-center gap-2">📊 Ringkasan Kewangan Bulanan</h2><p class="text-xs text-slate-400">Analisis jualan, tunai di kedai & pecahan perbelanjaan</p></div>
                 <button onclick="downloadPDF()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all shadow-md">📥 Simpan PDF Laporan Bulan Ini</button>
             </div>
-            
+
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Kad 1: Jumlah Jualan -->
                 <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between">
                     <div>
                         <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Jumlah Jualan (Total Sale)</span>
@@ -270,7 +305,6 @@
                     <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Terkumpul jualan harian kedai.</div>
                 </div>
 
-                <!-- Kad 2: TOTAL CASH DI KEDAI -->
                 <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between shadow-xs">
                     <div>
                         <div class="flex items-center justify-between">
@@ -282,7 +316,6 @@
                     <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Tunai tinggal ditolak tunai keluar.</div>
                 </div>
 
-                <!-- Kad 3: Jumlah Penolakan / Kos -->
                 <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between">
                     <div>
                         <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Jumlah Kos / Belanja</span>
@@ -295,7 +328,6 @@
                     </div>
                 </div>
 
-                <!-- Kad 4: Untung Bersih -->
                 <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between">
                     <div>
                         <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Untung Bersih (Net Profit)</span>
@@ -319,62 +351,38 @@
         </section>
     </main>
 
-    <!-- ===== POPUP MODAL CASH KEDAI (DUIT TINGGAL & DUIT KELUAR) ===== -->
+    <!-- ===== POPUP MODAL CASH KEDAI ===== -->
     <div id="cashShopModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 ease-out">
         <div id="cashShopModalBox" class="bg-white rounded-3xl shadow-2xl border border-amber-100 w-full max-w-lg p-6 sm:p-7 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
-            
             <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl font-bold">
-                        💰
-                    </div>
+                    <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl font-bold">💰</div>
                     <div>
                         <h2 class="text-lg font-bold text-slate-900 tracking-tight">Key-in Cash Kedai</h2>
                         <p class="text-xs text-slate-500">Duit tinggal di kedai (Float) & Duit keluar</p>
                     </div>
                 </div>
-                <button onclick="closeCashShopModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center transition-all">
-                    ✕
-                </button>
+                <button onclick="closeCashShopModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center transition-all">✕</button>
             </div>
-
             <form id="cashShopFormModal" onsubmit="addCashInShop(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tarikh</label>
-                    <input type="date" id="cashShopDateModal" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-medium">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jenis Transaksi Cash</label>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Tarikh</label><input type="date" id="cashShopDateModal" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-medium"></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Jenis Transaksi Cash</label>
                     <select id="cashShopTypeModal" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50/50 font-semibold text-amber-900">
                         <option value="in">📥 Duit Cash Tinggal di Kedai (Float / Baki)</option>
                         <option value="out">📤 Duit Keluar Dari Kedai (Cash Out / Ambil)</option>
                     </select>
                 </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Catatan / Nota</label>
-                    <input type="text" id="cashShopDescModal" placeholder="Cth: Baki float dalam laci / Ambil duit beli ais" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jumlah (RM)</label>
-                    <input type="number" step="0.01" id="cashShopAmountModal" placeholder="0.00" required class="w-full p-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-bold text-amber-600">
-                </div>
-
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Catatan / Nota</label><input type="text" id="cashShopDescModal" placeholder="Cth: Baki float dalam laci / Ambil duit beli ais" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50"></div>
+                <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Jumlah (RM)</label><input type="number" step="0.01" id="cashShopAmountModal" placeholder="0.00" required class="w-full p-3 rounded-xl border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-amber-500 bg-slate-50/50 font-bold text-amber-600"></div>
                 <div class="pt-2 flex items-center gap-3">
-                    <button type="button" onclick="closeCashShopModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-xs transition-all">
-                        Batal
-                    </button>
-                    <button type="submit" class="w-2/3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md">
-                        Simpan Rekod Cash 🚀
-                    </button>
+                    <button type="button" onclick="closeCashShopModal()" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-xs transition-all">Batal</button>
+                    <button type="submit" class="w-2/3 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md">Simpan Rekod Cash 🚀</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ===== BUTANG FLOATING CHAT DI SEBELAH KANAN BAWAH ===== -->
+    <!-- ===== BUTANG FLOATING CHAT ===== -->
     <div class="fixed bottom-5 right-5 z-40">
         <button onclick="toggleChatModal()" class="relative bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 text-white p-3.5 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-indigo-400/30">
             <span class="text-2xl">💬</span>
@@ -382,77 +390,104 @@
         </button>
     </div>
 
-    <!-- ===== POPUP DRAWER CHAT (MESEJ BOSS & STAFF) ===== -->
+    <!-- ===== POPUP DRAWER CHAT ===== -->
     <div id="chatDrawerContainer" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
         <div id="chatBackdrop" onclick="toggleChatModal()" class="absolute inset-0 bg-slate-900/40 opacity-0 transition-opacity duration-300"></div>
-
         <div id="chatDrawer" class="absolute top-0 right-0 bottom-0 w-full sm:w-96 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col pointer-events-auto">
             <div id="chatHeader" class="p-4 bg-gradient-to-r from-indigo-900 to-slate-900 text-white flex justify-between items-center shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-full bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-lg shadow-inner">
-                        💬
-                    </div>
+                    <div class="w-9 h-9 rounded-full bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-lg shadow-inner">💬</div>
                     <div>
-                        <h3 class="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
-                            Sembang Boss & Staff
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                        </h3>
+                        <h3 class="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">Sembang Boss & Staff<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span></h3>
                         <p class="text-[11px] text-indigo-200" id="chatHeaderSub">Hantar & balas mesej langsung</p>
                     </div>
                 </div>
-                <button onclick="toggleChatModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition-all active:scale-90">
-                    ✕
-                </button>
+                <button onclick="toggleChatModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-bold transition-all active:scale-90">✕</button>
             </div>
-
             <div id="chatMessagesBox" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
                 <div class="text-center py-8 text-slate-400 text-xs flex flex-col items-center gap-2">
                     <span class="text-3xl opacity-50">📬</span>
                     <span>Tiada mesej lagi. Mula berhubung sekarang!</span>
                 </div>
             </div>
-
             <div class="p-3 bg-white border-t border-slate-200 shadow-lg">
                 <form id="chatForm" onsubmit="handleSendMessage(event)" class="flex items-center gap-2">
                     <input type="text" id="chatInput" placeholder="Taip mesej pesanan / soalan..." required autocomplete="off" class="flex-1 p-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-1 shadow-sm">
-                        <span>Hantar</span>
-                        <span>🚀</span>
-                    </button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-1 shadow-sm"><span>Hantar</span><span>🚀</span></button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- ===== POPUP MODAL LOG MASUK (Google Sign-In) ===== -->
+    <!-- ===== POPUP MODAL LOG MASUK (EMAIL + PASSWORD) ===== -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out opacity-0 pointer-events-none">
         <div id="loginModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 sm:p-8 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
-            <div class="text-center mb-6">
-                <!-- LOGO INTERFACE LOG IN -->
+            <div class="text-center mb-5">
                 <div class="flex justify-center mb-3">
                     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBeQ5VvYxL8jRrcsSojKoN45P7SB2CSWu1cYEmpSmTtg&s" alt="Logo Kedai" class="w-20 h-20 object-contain rounded-2xl p-1 bg-slate-50 border border-slate-100 shadow-xs" />
                 </div>
                 <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Log Masuk Sistem</h2>
-                <p class="text-xs text-slate-500 mt-1">Sila log masuk menggunakan akaun Google anda.</p>
+                <p class="text-xs text-slate-500 mt-1">Gunakan emel & kata laluan untuk akses.</p>
             </div>
 
-            <button onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-50 active:scale-95 text-slate-700 font-semibold py-3 rounded-xl text-sm transition-all shadow-md border border-slate-200 flex items-center justify-center gap-3">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5" />
-                🔑 Log Masuk dengan Google
-            </button>
+            <!-- Tabs: Login / Daftar -->
+            <div class="flex border-b border-slate-200 mb-5">
+                <div id="tabLogin" class="auth-tab active flex-1 text-center py-2 text-sm font-semibold" onclick="switchAuthTab('login')">🔑 Log Masuk</div>
+                <div id="tabRegister" class="auth-tab inactive flex-1 text-center py-2 text-sm font-semibold" onclick="switchAuthTab('register')">📝 Daftar Akaun</div>
+            </div>
 
-            <div id="loginError" class="mt-4 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3 text-center hidden font-semibold">
-                ❌ Ralat log masuk. Sila cuba lagi.
+            <!-- Panel Login -->
+            <div id="panelLogin" class="auth-panel active">
+                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">📧 Emel</label>
+                        <input type="email" id="loginEmail" placeholder="staff@kedai.com" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 bg-slate-50/50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">🔒 Kata Laluan</label>
+                        <div class="relative">
+                            <input type="password" id="loginPassword" placeholder="Min 6 aksara" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 bg-slate-50/50 pr-10">
+                            <span onclick="togglePwd('loginPassword', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer select-none">👁️</span>
+                        </div>
+                    </div>
+                    <div id="loginError" class="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3 text-center hidden font-semibold">❌ Ralat log masuk. Sila cuba lagi.</div>
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">🔑 Log Masuk</button>
+                </form>
+            </div>
+
+            <!-- Panel Pendaftaran -->
+            <div id="panelRegister" class="auth-panel">
+                <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">👤 Nama</label>
+                        <input type="text" id="regName" placeholder="Nama penuh" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 bg-slate-50/50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">📧 Emel</label>
+                        <input type="email" id="regEmail" placeholder="staff@kedai.com" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 bg-slate-50/50">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">🔒 Kata Laluan</label>
+                        <div class="relative">
+                            <input type="password" id="regPassword" placeholder="Min 6 aksara" required minlength="6" class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 bg-slate-50/50 pr-10">
+                            <span onclick="togglePwd('regPassword', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer select-none">👁️</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">🔁 Sahkan Kata Laluan</label>
+                        <input type="password" id="regConfirm" placeholder="Taip semula" required minlength="6" class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 bg-slate-50/50">
+                    </div>
+                    <div id="registerError" class="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3 text-center hidden font-semibold"></div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">📝 Daftar Akaun</button>
+                    <p class="text-[10px] text-slate-400 text-center mt-2">* Akaun baru akan diberikan peranan <strong>Staff</strong>. Untuk akses Boss, hubungi pentadbir.</p>
+                </form>
             </div>
         </div>
     </div>
 
     <!-- ===== POPUP MODAL STOCKTAKE ===== -->
     <div id="stockModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 opacity-0 pointer-events-none transition-all duration-300 ease-out">
-        
         <div id="stockModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-5xl max-h-[90vh] flex flex-col transform scale-90 transition-all duration-300 ease-out overflow-hidden">
-            
-            <!-- Modal Header -->
             <div class="p-5 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center sticky top-0 z-10">
                 <div class="flex items-center gap-3">
                     <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
@@ -461,19 +496,13 @@
                         <p class="text-xs text-slate-500">Kemaskini baki Susu, syrup, cawan & packaging (Limit Pcs 1 - 2000)</p>
                     </div>
                 </div>
-                <button onclick="closeStockModal()" class="w-9 h-9 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold text-sm flex items-center justify-center transition-all active:scale-90">
-                    ✕
-                </button>
+                <button onclick="closeStockModal()" class="w-9 h-9 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 hover:text-slate-900 font-bold text-sm flex items-center justify-center transition-all active:scale-90">✕</button>
             </div>
-
-            <!-- Modal Body (Scrollable) -->
             <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1">
-                <!-- BARIAN CARIAN STOK -->
                 <div class="relative">
                     <input type="text" id="stockSearchInput" oninput="renderStockTable()" placeholder="🔍 Cari nama item atau bahan (cth: Susu, Vanilla, Cawan, Matcha)..." class="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-2xs">
                     <button onclick="clearStockSearch()" title="Padam Carian" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center bg-slate-100">✕</button>
                 </div>
-
                 <div class="flex flex-wrap items-center justify-between gap-3 bg-blue-50/60 p-3.5 rounded-2xl border border-blue-100">
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="flex items-center gap-2 text-sm text-slate-700">
@@ -484,7 +513,6 @@
                     </div>
                     <div id="cloudStatus" class="text-xs font-medium text-emerald-600 bg-emerald-100/80 px-3 py-1 rounded-full shadow-2xs">☁️ Sync</div>
                 </div>
-
                 <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Senarai Item Stok Mengikut Kategori</span>
                     <div class="flex flex-wrap gap-2">
@@ -493,8 +521,6 @@
                         <button id="btnReset" class="staff-only bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1 active:scale-95 transition-all">🔄 Reset Baki Semasa = 5</button>
                     </div>
                 </div>
-
-                <!-- Table Container -->
                 <div class="overflow-x-auto border border-slate-100 rounded-2xl shadow-2xs bg-white">
                     <table class="w-full text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase border-b border-slate-100">
@@ -509,8 +535,6 @@
                         <tbody id="syrupTableBody" class="divide-y divide-slate-100"></tbody>
                     </table>
                 </div>
-
-                <!-- Tambah Item (Staff sahaja) -->
                 <div class="staff-only flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
                     <select id="newSyrupCategory" class="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         <option value="🥛 Susu Farm Fresh">🥛 Susu Farm Fresh</option>
@@ -519,7 +543,6 @@
                         <option value="🥤 Cawan & Packaging">🥤 Cawan & Packaging</option>
                     </select>
                     <input type="text" id="newSyrupName" placeholder="+ Tambah item baru..." class="flex-1 min-w-[150px] border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-slate-50/50">
-                    
                     <select id="newSyrupUnit" class="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-medium bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-400">
                         <option value="pcs">pcs</option>
                         <option value="botol">botol</option>
@@ -527,17 +550,13 @@
                         <option value="tin">tin</option>
                         <option value="kotak">kotak</option>
                     </select>
-
                     <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1 text-xs">
                         <span class="text-slate-500 font-semibold">Limit:</span>
                         <input type="number" id="newSyrupTarget" min="1" max="2000" value="5" class="w-16 h-8 text-center font-bold text-blue-600 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400">
                     </div>
-
                     <button id="btnAddSyrup" onclick="addNewSyrupItem()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-sm active:scale-95">Tambah Item</button>
                 </div>
             </div>
-
-            <!-- Modal Footer -->
             <div class="p-4 bg-slate-50 border-t border-slate-100 text-right">
                 <button onclick="closeStockModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold px-6 py-2 rounded-xl text-xs transition-all shadow-sm">Tutup Semakan</button>
             </div>
@@ -549,7 +568,7 @@
 
     <!-- ======== JAVASCRIPT ======== -->
     <script>
-        // Function Toast untuk notifikasi
+        // Toast
         function showToast(msg) {
             const toast = document.getElementById('toast');
             if (toast) {
@@ -579,15 +598,60 @@
         const firestore = firebase.firestore();
 
         // ============================================================
-        // UID BOSS (dikenali secara automatik)
+        // BOSS EMAIL (tukar ke emel boss yang sebenar)
         // ============================================================
-        const BOSS_UID = 'd1EQYb90teNgscI6sC9wAMsgdFa2';
+        const BOSS_EMAIL = 'boss@kedai.com'; // <-- Tukar ke emel boss
 
-        // ============================================================
-        // SISTEM LOG MASUK (Google Sign-In)
-        // ============================================================
         let currentRole = sessionStorage.getItem('user_role') || null;
+        let currentUserEmail = sessionStorage.getItem('user_email') || null;
 
+        // ============================================================
+        // FUNGSI TOGGLE PASSWORD VISIBILITY
+        // ============================================================
+        function togglePwd(inputId, el) {
+            const inp = document.getElementById(inputId);
+            if (!inp) return;
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                el.textContent = '🙈';
+            } else {
+                inp.type = 'password';
+                el.textContent = '👁️';
+            }
+        }
+
+        // ============================================================
+        // TAB SWITCH LOGIN / REGISTER
+        // ============================================================
+        function switchAuthTab(tab) {
+            const tabLogin = document.getElementById('tabLogin');
+            const tabRegister = document.getElementById('tabRegister');
+            const panelLogin = document.getElementById('panelLogin');
+            const panelRegister = document.getElementById('panelRegister');
+
+            if (tab === 'login') {
+                tabLogin.className = 'auth-tab active flex-1 text-center py-2 text-sm font-semibold';
+                tabRegister.className = 'auth-tab inactive flex-1 text-center py-2 text-sm font-semibold';
+                panelLogin.classList.add('active');
+                panelLogin.classList.remove('hidden');
+                panelRegister.classList.remove('active');
+                panelRegister.classList.add('hidden');
+            } else {
+                tabRegister.className = 'auth-tab active flex-1 text-center py-2 text-sm font-semibold';
+                tabLogin.className = 'auth-tab inactive flex-1 text-center py-2 text-sm font-semibold';
+                panelRegister.classList.add('active');
+                panelRegister.classList.remove('hidden');
+                panelLogin.classList.remove('active');
+                panelLogin.classList.add('hidden');
+            }
+            // Sembunyikan error
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('registerError').classList.add('hidden');
+        }
+
+        // ============================================================
+        // SISTEM LOG MASUK (EMAIL + PASSWORD)
+        // ============================================================
         function openLoginModal() {
             const modal = document.getElementById('loginModal');
             const box = document.getElementById('loginModalBox');
@@ -612,66 +676,157 @@
             }, 200);
         }
 
-        function loginWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider)
-                .then((result) => {
-                    const user = result.user;
-                    // Tentukan peranan: jika UID adalah boss, set boss
-                    let role = 'staff';
-                    let displayName = user.displayName || user.email;
-                    
-                    if (user.uid === BOSS_UID) {
-                        role = 'boss';
-                    }
+        // Login handler
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
 
-                    // Dapatkan peranan dari Firestore (tapi override dengan boss jika UID boss)
-                    firestore.collection('users').doc(user.uid).get()
-                        .then((doc) => {
-                            if (doc.exists) {
-                                // Jika UID boss, tetap set boss, abaikan dari Firestore
-                                if (user.uid !== BOSS_UID) {
-                                    role = doc.data().role || 'staff';
-                                    displayName = doc.data().displayName || user.displayName || user.email;
-                                } else {
-                                    // Pastikan Firestore diselaraskan dengan role boss
-                                    if (doc.data().role !== 'boss') {
-                                        firestore.collection('users').doc(user.uid).update({ role: 'boss' });
-                                    }
-                                    displayName = doc.data().displayName || user.displayName || user.email;
-                                }
-                            } else {
-                                // Buat rekod pengguna baharu dengan role yang betul
-                                firestore.collection('users').doc(user.uid).set({
-                                    role: role,
-                                    displayName: displayName,
-                                    email: user.email
-                                });
-                            }
-                            sessionStorage.setItem('user_role', role);
-                            sessionStorage.setItem('user_name', displayName);
-                            currentRole = role;
-                            closeLoginModal();
-                            applyRoleUI();
-                            showToast('👋 Selamat Datang, ' + displayName);
-                        })
-                        .catch((err) => {
-                            console.error('Ralat baca Firestore:', err);
-                            showToast('❌ Ralat mendapatkan peranan pengguna.');
-                        });
+            errorEl.classList.add('hidden');
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    // Tentukan peranan
+                    determineAndSetRole(user, email);
                 })
                 .catch((error) => {
-                    console.error('Ralat log masuk Google:', error);
-                    document.getElementById('loginError').innerText = '❌ Ralat: ' + error.message;
-                    document.getElementById('loginError').classList.remove('hidden');
+                    console.error('Login error:', error);
+                    let msg = '❌ Ralat log masuk: ';
+                    if (error.code === 'auth/user-not-found') msg += 'Emel tidak berdaftar.';
+                    else if (error.code === 'auth/wrong-password') msg += 'Kata laluan salah.';
+                    else if (error.code === 'auth/invalid-email') msg += 'Emel tidak sah.';
+                    else if (error.code === 'auth/too-many-requests') msg += 'Terlalu banyak percubaan. Sila cuba sebentar lagi.';
+                    else msg += error.message;
+                    errorEl.innerText = msg;
+                    errorEl.classList.remove('hidden');
                 });
         }
 
+        // Register handler
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regConfirm').value;
+            const errorEl = document.getElementById('registerError');
+
+            errorEl.classList.add('hidden');
+
+            if (password !== confirm) {
+                errorEl.innerText = '❌ Kata laluan tidak sepadan.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 6) {
+                errorEl.innerText = '❌ Kata laluan mestilah sekurang-kurangnya 6 aksara.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    // Default role: staff (kecuali jika emel = boss email)
+                    let role = 'staff';
+                    if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
+                        role = 'boss';
+                    }
+                    // Simpan ke Firestore
+                    return firestore.collection('users').doc(user.uid).set({
+                        role: role,
+                        displayName: name,
+                        email: email,
+                        createdAt: new Date().toISOString()
+                    }).then(() => {
+                        sessionStorage.setItem('user_role', role);
+                        sessionStorage.setItem('user_name', name);
+                        sessionStorage.setItem('user_email', email);
+                        currentRole = role;
+                        currentUserEmail = email;
+                        closeLoginModal();
+                        applyRoleUI();
+                        showToast('✅ Akaun berjaya didaftarkan! Selamat datang, ' + name);
+                    });
+                })
+                .catch((error) => {
+                    console.error('Register error:', error);
+                    let msg = '❌ Gagal daftar: ';
+                    if (error.code === 'auth/email-already-in-use') msg += 'Emel sudah digunakan.';
+                    else if (error.code === 'auth/invalid-email') msg += 'Emel tidak sah.';
+                    else if (error.code === 'auth/weak-password') msg += 'Kata laluan terlalu lemah (min 6 aksara).';
+                    else msg += error.message;
+                    errorEl.innerText = msg;
+                    errorEl.classList.remove('hidden');
+                });
+        }
+
+        // Tentukan role berdasarkan emel & Firestore
+        function determineAndSetRole(user, email) {
+            // Semak Firestore untuk peranan
+            firestore.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    let role = 'staff';
+                    let displayName = user.displayName || email;
+
+                    if (doc.exists) {
+                        role = doc.data().role || 'staff';
+                        displayName = doc.data().displayName || user.displayName || email;
+                        // Jika emel adalah boss email, pastikan role = boss
+                        if (email.toLowerCase() === BOSS_EMAIL.toLowerCase() && role !== 'boss') {
+                            role = 'boss';
+                            firestore.collection('users').doc(user.uid).update({ role: 'boss' });
+                        }
+                    } else {
+                        // Pengguna baru: tentukan role berdasarkan email
+                        if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
+                            role = 'boss';
+                        } else {
+                            role = 'staff';
+                        }
+                        firestore.collection('users').doc(user.uid).set({
+                            role: role,
+                            displayName: displayName,
+                            email: email,
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+
+                    sessionStorage.setItem('user_role', role);
+                    sessionStorage.setItem('user_name', displayName);
+                    sessionStorage.setItem('user_email', email);
+                    currentRole = role;
+                    currentUserEmail = email;
+                    closeLoginModal();
+                    applyRoleUI();
+                    showToast('👋 Selamat Datang, ' + displayName);
+                })
+                .catch((err) => {
+                    console.error('Ralat baca Firestore:', err);
+                    // Fallback: gunakan email untuk tentukan role
+                    let role = 'staff';
+                    if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) role = 'boss';
+                    sessionStorage.setItem('user_role', role);
+                    sessionStorage.setItem('user_name', user.displayName || email);
+                    sessionStorage.setItem('user_email', email);
+                    currentRole = role;
+                    currentUserEmail = email;
+                    closeLoginModal();
+                    applyRoleUI();
+                    showToast('👋 Selamat Datang, ' + (user.displayName || email));
+                });
+        }
+
+        // Log keluar
         function handleLogout() {
             auth.signOut().then(() => {
                 sessionStorage.removeItem('user_role');
                 sessionStorage.removeItem('user_name');
+                sessionStorage.removeItem('user_email');
                 currentRole = null;
+                currentUserEmail = null;
                 showToast('👋 Anda telah log keluar.');
                 openLoginModal();
             }).catch((error) => {
@@ -680,55 +835,80 @@
             });
         }
 
-        // Auto-login state
+        // ============================================================
+        // AUTO-LOGIN STATE (onAuthStateChanged)
+        // ============================================================
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // Pengguna sudah log masuk, semak peranan
-                let role = 'staff';
-                let displayName = user.displayName || user.email;
-                
-                if (user.uid === BOSS_UID) {
-                    role = 'boss';
-                }
-
+                // Pengguna sudah log masuk
+                const email = user.email || '';
                 firestore.collection('users').doc(user.uid).get()
                     .then((doc) => {
+                        let role = 'staff';
+                        let displayName = user.displayName || email;
+
                         if (doc.exists) {
-                            if (user.uid !== BOSS_UID) {
-                                role = doc.data().role || 'staff';
-                                displayName = doc.data().displayName || user.displayName || user.email;
-                            } else {
-                                // Pastikan Firestore selaras
-                                if (doc.data().role !== 'boss') {
-                                    firestore.collection('users').doc(user.uid).update({ role: 'boss' });
-                                }
-                                displayName = doc.data().displayName || user.displayName || user.email;
+                            role = doc.data().role || 'staff';
+                            displayName = doc.data().displayName || user.displayName || email;
+                            // Pastikan boss email set role boss
+                            if (email.toLowerCase() === BOSS_EMAIL.toLowerCase() && role !== 'boss') {
+                                role = 'boss';
+                                firestore.collection('users').doc(user.uid).update({ role: 'boss' });
                             }
                         } else {
-                            // Buat rekod baharu
+                            if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
+                                role = 'boss';
+                            } else {
+                                role = 'staff';
+                            }
                             firestore.collection('users').doc(user.uid).set({
                                 role: role,
                                 displayName: displayName,
-                                email: user.email
+                                email: email,
+                                createdAt: new Date().toISOString()
                             });
                         }
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', displayName);
+                        sessionStorage.setItem('user_email', email);
                         currentRole = role;
+                        currentUserEmail = email;
                         closeLoginModal();
                         applyRoleUI();
                     })
                     .catch((err) => {
                         console.error('Ralat baca Firestore (onAuth):', err);
+                        // Fallback
+                        let role = 'staff';
+                        if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) role = 'boss';
+                        sessionStorage.setItem('user_role', role);
+                        sessionStorage.setItem('user_name', user.displayName || email);
+                        sessionStorage.setItem('user_email', email);
+                        currentRole = role;
+                        currentUserEmail = email;
+                        closeLoginModal();
+                        applyRoleUI();
                     });
             } else {
-                // Tiada pengguna, buka modal login
+                // Tiada pengguna, buka modal login jika tiada role dalam session
                 if (!sessionStorage.getItem('user_role')) {
                     openLoginModal();
+                } else {
+                    // Kadang-kadang auth state hilang tapi session masih ada, semak semula
+                    const storedRole = sessionStorage.getItem('user_role');
+                    if (storedRole) {
+                        currentRole = storedRole;
+                        applyRoleUI();
+                    } else {
+                        openLoginModal();
+                    }
                 }
             }
         });
 
+        // ============================================================
+        // APPLY ROLE UI
+        // ============================================================
         function applyRoleUI() {
             const userName = sessionStorage.getItem('user_name') || 'Pengguna';
             const roleBadge = document.getElementById('roleBadge');
@@ -740,23 +920,26 @@
             if (currentRole === 'boss') {
                 roleBadge.innerHTML = `👑 ${userName}`;
                 roleBadge.className = "text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 shadow-2xs";
-                
+
                 formsSection.classList.add('hidden');
                 bossBanner.classList.remove('hidden');
                 if (stockTag) stockTag.innerText = "Mod Boss (Semakan Sahaja)";
                 if (chatHeaderSub) chatHeaderSub.innerText = "Mod Boss: Hantar arahan atau maklum balas ke Staff";
 
                 document.querySelectorAll('.staff-only').forEach(el => el.classList.add('hidden'));
+                // Sembunyikan butang padam dan tambah di jadual
+                document.querySelectorAll('.col-action').forEach(el => el.style.display = 'none');
             } else {
                 roleBadge.innerHTML = `👤 ${userName}`;
                 roleBadge.className = "text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-2xs";
-                
+
                 formsSection.classList.remove('hidden');
                 bossBanner.classList.add('hidden');
                 if (stockTag) stockTag.innerText = "Khas Untuk Staff";
                 if (chatHeaderSub) chatHeaderSub.innerText = "Mod Staff: Balas mesej & maklumkan status kedai";
 
                 document.querySelectorAll('.staff-only').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.col-action').forEach(el => el.style.display = '');
             }
 
             renderFinance();
@@ -769,7 +952,7 @@
         // ============================================================
         function openCashShopModal() {
             if (currentRole === 'boss') {
-                showToast("Mod Boss (Semakan Sahaja)");
+                showToast("⚠️ Mod Boss (Semakan Sahaja) - tiada akses edit.");
                 return;
             }
             const modal = document.getElementById('cashShopModal');
@@ -794,13 +977,12 @@
                 document.body.style.overflow = 'auto';
             }, 200);
         }
-
         document.getElementById('cashShopModal').addEventListener('click', (e) => {
             if (e.target.id === 'cashShopModal') closeCashShopModal();
         });
 
         // ============================================================
-        // SISTEM CHAT REALTIME (BOSS & STAFF)
+        // SISTEM CHAT
         // ============================================================
         let isChatOpen = false;
         let chatMessages = [];
@@ -819,10 +1001,8 @@
                 backdrop.classList.add('opacity-100');
                 drawer.classList.remove('translate-x-full');
                 drawer.classList.add('translate-x-0');
-
                 totalUnreadCount = 0;
                 updateUnreadBadges();
-
                 setTimeout(() => {
                     const msgBox = document.getElementById('chatMessagesBox');
                     msgBox.scrollTop = msgBox.scrollHeight;
@@ -848,6 +1028,10 @@
 
         function handleSendMessage(e) {
             e.preventDefault();
+            if (!currentRole) {
+                showToast('⚠️ Sila log masuk dahulu.');
+                return;
+            }
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
             if (!text) return;
@@ -894,13 +1078,15 @@
                 const isBossRole = (msg.senderRole === 'boss');
 
                 const alignClass = isMe ? 'justify-end' : 'justify-start';
-                const bubbleColor = isMe 
-                    ? (isBossRole ? 'bg-amber-500 text-white rounded-br-none' : 'bg-indigo-600 text-white rounded-br-none') 
-                    : (isBossRole ? 'bg-amber-100 text-amber-950 border border-amber-200 rounded-bl-none' : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none');
+                const bubbleColor = isMe ?
+                    (isBossRole ? 'bg-amber-500 text-white rounded-br-none' :
+                        'bg-indigo-600 text-white rounded-br-none') :
+                    (isBossRole ? 'bg-amber-100 text-amber-950 border border-amber-200 rounded-bl-none' :
+                        'bg-white text-slate-800 border border-slate-200 rounded-bl-none');
 
-                const roleBadge = isBossRole 
-                    ? '<span class="text-[9px] font-bold bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-md">👑 Boss</span>' 
-                    : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">👤 Staff</span>';
+                const roleBadge = isBossRole ?
+                    '<span class="text-[9px] font-bold bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-md">👑 Boss</span>' :
+                    '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">👤 Staff</span>';
 
                 box.innerHTML += `
                     <div class="flex ${alignClass} animate-pop-in">
@@ -943,7 +1129,7 @@
         }
 
         // ============================================================
-        // FUNGSI MODAL STOCKTAKE & CARIAN
+        // MODAL STOCKTAKE
         // ============================================================
         function openStockModal() {
             const modal = document.getElementById('stockModal');
@@ -977,11 +1163,9 @@
                 searchInput.focus();
             }
         }
-
         document.getElementById('stockModal').addEventListener('click', (e) => {
             if (e.target.id === 'stockModal') closeStockModal();
         });
-
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeStockModal();
@@ -991,13 +1175,13 @@
         });
 
         // ============================================================
-        // BAHAGIAN KEWANGAN & CASH KEDAI
+        // KEWANGAN & CASH KEDAI
         // ============================================================
         let sales = [];
         let expenses = [];
         let cashInShop = [];
         const today = new Date();
-        
+
         document.getElementById('saleDate').valueAsDate = today;
         document.getElementById('expDate').valueAsDate = today;
         document.getElementById('cashShopDateModal').valueAsDate = today;
@@ -1023,7 +1207,7 @@
         });
 
         // ============================================================
-        // BAHAGIAN STOCKTAKE: BAKI BERTERUSAN (MASTER STOCK)
+        // STOCKTAKE: BAKI BERTERUSAN
         // ============================================================
         window.defaultCategories = {
             "🥛 Susu Farm Fresh": [
@@ -1144,7 +1328,6 @@
         function saveMasterStockToFirebase() {
             if (currentRole !== 'staff') return;
             db.ref('inventoryStock').set(window.stockData).catch(err => console.error('Save master stock error:', err));
-            
             const dateStr = document.getElementById('stockDate').value;
             if (dateStr) {
                 db.ref('stocktake/' + dateStr).set({
@@ -1155,11 +1338,11 @@
         }
 
         // ============================================================
-        // FUNGSI UBAH KEDUKAN ITEM (UP & DOWN)
+        // FUNGSI UBAH KEDUDUKAN ITEM
         // ============================================================
         function moveItemUp(category, index) {
             if (currentRole !== 'staff') return;
-            if (index <= 0) return; // Dah paling atas
+            if (index <= 0) return;
             const list = window.stockCategories[category];
             const temp = list[index];
             list[index] = list[index - 1];
@@ -1171,7 +1354,7 @@
         function moveItemDown(category, index) {
             if (currentRole !== 'staff') return;
             const list = window.stockCategories[category];
-            if (index >= list.length - 1) return; // Dah paling bawah
+            if (index >= list.length - 1) return;
             const temp = list[index];
             list[index] = list[index + 1];
             list[index + 1] = temp;
@@ -1190,24 +1373,19 @@
                 showToast("⚠️ Sila masukkan nama item!");
                 return;
             }
-
             if (!window.stockCategories[category]) {
                 window.stockCategories[category] = [];
             }
-
             const exists = window.stockCategories[category].some(i => i.name.toLowerCase() === name.toLowerCase());
             if (exists) {
                 showToast("⚠️ Item ini sudah wujud!");
                 return;
             }
-
             window.stockCategories[category].push({ name, unit, target });
             window.stockData[name] = target;
-
             saveCatalogToFirebase();
             saveMasterStockToFirebase();
             renderStockTable();
-
             document.getElementById('newSyrupName').value = '';
             showToast(`Item "${name}" berjaya ditambah!`);
         }
@@ -1228,15 +1406,12 @@
 
             Object.keys(categories).forEach((catName) => {
                 const rawItems = categories[catName] || [];
-                // Kita kekalkan indeks asal supaya susunan up/down tepat
                 const itemsWithIndex = rawItems.map((itemObj, index) => ({ itemObj, index }));
-                
-                const filteredItems = itemsWithIndex.filter(({ itemObj }) => 
+                const filteredItems = itemsWithIndex.filter(({ itemObj }) =>
                     itemObj.name.toLowerCase().includes(searchQuery) || catName.toLowerCase().includes(searchQuery)
                 );
 
                 if (filteredItems.length === 0) return;
-
                 totalMatchesFound += filteredItems.length;
 
                 const catHeaderTr = document.createElement('tr');
@@ -1256,7 +1431,6 @@
 
                     let statusClass = 'status-full';
                     let statusText = 'Mencukupi';
-
                     if (currentQty === 0) {
                         statusClass = 'status-danger';
                         statusText = 'Habis';
@@ -1274,7 +1448,6 @@
                     const actionTd = isBoss ? '' : `
                         <td class="py-2.5 px-4 text-center col-action">
                             <div class="flex items-center justify-center gap-1">
-                                <!-- Butang Susun Kedudukan -->
                                 <button onclick="moveItemUp('${catName}', ${index})" ${isFirst ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Naikkan">⬆️</button>
                                 <button onclick="moveItemDown('${catName}', ${index})" ${isLast ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Turunkan">⬇️</button>
                                 <button class="btn-delete-syrup text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-100 font-medium transition-colors ml-1" data-syrup="${itemName}" data-cat="${catName}">Padam</button>
@@ -1303,9 +1476,7 @@
                     `;
 
                     tr.innerHTML = `
-                        <td class="py-2.5 px-4 pl-6">
-                            <div class="font-medium text-slate-800">${itemName}</div>
-                        </td>
+                        <td class="py-2.5 px-4 pl-6"><div class="font-medium text-slate-800">${itemName}</div></td>
                         <td class="py-2.5 px-4">${qtyControls}</td>
                         <td class="py-2.5 px-4">${targetControls}</td>
                         <td class="py-2.5 px-4"><span class="status-badge ${statusClass}">${statusText}</span></td>
@@ -1338,7 +1509,6 @@
                         }
                     });
                 });
-
                 document.querySelectorAll('.btn-plus').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const name = e.target.dataset.syrup;
@@ -1351,7 +1521,6 @@
                         }
                     });
                 });
-
                 document.querySelectorAll('.stock-qty').forEach(input => {
                     input.addEventListener('change', (e) => {
                         const name = e.target.dataset.syrup;
@@ -1362,7 +1531,6 @@
                         updateStockQty(name, val);
                     });
                 });
-
                 document.querySelectorAll('.target-qty').forEach(input => {
                     input.addEventListener('change', (e) => {
                         const name = e.target.dataset.syrup;
@@ -1374,7 +1542,6 @@
                         updateTargetQty(cat, name, val);
                     });
                 });
-
                 document.querySelectorAll('.btn-delete-syrup').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const name = e.target.dataset.syrup;
@@ -1385,7 +1552,6 @@
                                 if (idx > -1) {
                                     window.stockCategories[cat].splice(idx, 1);
                                     delete window.stockData[name];
-                                    
                                     saveCatalogToFirebase();
                                     saveMasterStockToFirebase();
                                     renderStockTable();
@@ -1420,9 +1586,8 @@
         }
 
         // ============================================================
-        // FUNGSI KEWANGAN & CASH KEDAI
+        // FUNGSI KEWANGAN
         // ============================================================
-        
         function addSales(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1430,7 +1595,6 @@
             const desc = document.getElementById('saleDesc').value;
             const amount = parseFloat(document.getElementById('saleAmount').value);
             const id = Date.now();
-            
             db.ref('sales/' + id).set({ id, date, desc, amount });
             document.getElementById('salesForm').reset();
             document.getElementById('saleDate').valueAsDate = new Date();
@@ -1460,7 +1624,6 @@
             const desc = document.getElementById('cashShopDescModal').value;
             const amount = parseFloat(document.getElementById('cashShopAmountModal').value);
             const id = Date.now();
-            
             db.ref('cashInShop/' + id).set({ id, date, type, desc, amount });
             document.getElementById('cashShopFormModal').reset();
             document.getElementById('cashShopDateModal').valueAsDate = new Date();
@@ -1472,7 +1635,7 @@
             if (currentRole !== 'staff') return;
             if (confirm("Padam rekod jualan ini?")) db.ref('sales/' + id).remove();
         }
-        
+
         function deleteExpense(id) {
             if (currentRole !== 'staff') return;
             if (confirm("Padam rekod perbelanjaan ini?")) db.ref('expenses/' + id).remove();
@@ -1485,27 +1648,33 @@
 
         function renderFinance() {
             const selectedMonth = document.getElementById('filterMonth').value;
-            
+
             let totalSalesMonth = 0;
-            let expCashTotal = 0, expQRTotal = 0, expTnGTot = 0;
-            let catSewaTotal = 0, catElektrikTotal = 0, catAirTotal = 0, catGajiTotal = 0, catAisTotal = 0, catLainTotal = 0;
+            let expCashTotal = 0,
+                expQRTotal = 0,
+                expTnGTot = 0;
+            let catSewaTotal = 0,
+                catElektrikTotal = 0,
+                catAirTotal = 0,
+                catGajiTotal = 0,
+                catAisTotal = 0,
+                catLainTotal = 0;
             let totalCashShopMonth = 0;
 
             const isBoss = (currentRole === 'boss');
 
-            // 1. KIRA DAN PAPAR JUALAN
+            // Sales
             const salesBody = document.getElementById('salesTableBody');
             salesBody.innerHTML = '';
             const filteredSales = sales.sort((a, b) => new Date(b.date) - new Date(a.date));
             document.getElementById('salesCount').innerText = `${filteredSales.length} rekod`;
-            
+
             filteredSales.forEach(item => {
                 if (item.date && item.date.startsWith(selectedMonth)) {
                     totalSalesMonth += item.amount;
                 }
-
-                const deleteBtn = isBoss ? '' : `<button onclick="deleteSale(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                
+                const deleteBtn = isBoss ? '' :
+                    `<button onclick="deleteSale(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
                 salesBody.innerHTML += `
                     <tr class="hover:bg-slate-50/80">
                         <td class="py-2.5 px-2">
@@ -1519,18 +1688,18 @@
                 `;
             });
 
-            // 2. KIRA DAN PAPAR PERBELANJAAN
+            // Expenses
             const expenseBody = document.getElementById('expenseTableBody');
             expenseBody.innerHTML = '';
             const filteredExpenses = expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
             document.getElementById('expCount').innerText = `${filteredExpenses.length} rekod`;
-            
+
             filteredExpenses.forEach(item => {
                 if (item.date && item.date.startsWith(selectedMonth)) {
                     if (item.method === 'Cash') expCashTotal += item.amount;
                     else if (item.method === 'QR') expQRTotal += item.amount;
                     else if (item.method === 'Touch n Go') expTnGTot += item.amount;
-                    
+
                     if (item.category === 'Sewa Kedai') catSewaTotal += item.amount;
                     else if (item.category === 'Bil Elektrik') catElektrikTotal += item.amount;
                     else if (item.category === 'Bil Air') catAirTotal += item.amount;
@@ -1543,8 +1712,8 @@
                 else if (item.method === 'QR') badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
                 else if (item.method === 'Touch n Go') badgeColor = 'bg-sky-50 text-sky-700 border border-sky-200';
 
-                const deleteBtn = isBoss ? '' : `<button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-
+                const deleteBtn = isBoss ? '' :
+                    `<button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
                 expenseBody.innerHTML += `
                     <tr class="hover:bg-slate-50/80">
                         <td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} inline-block mb-0.5">${item.method} • ${item.category}</span><div class="text-[11px] text-slate-400">${item.date}</div></td>
@@ -1555,7 +1724,7 @@
                 `;
             });
 
-            // 3. KIRA DAN PAPAR CASH KEDAI (TINGGAL & KELUAR)
+            // Cash Shop
             const cashShopBody = document.getElementById('cashShopTableBody');
             cashShopBody.innerHTML = '';
             const filteredCashShop = cashInShop.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1563,26 +1732,21 @@
 
             filteredCashShop.forEach(item => {
                 const isOut = (item.type === 'out');
-                
                 if (item.date && item.date.startsWith(selectedMonth)) {
                     if (isOut) totalCashShopMonth -= item.amount;
                     else totalCashShopMonth += item.amount;
                 }
-                const deleteBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-
-                const badgeTag = isOut 
-                    ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>`
-                    : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>`;
-
+                const deleteBtn = isBoss ? '' :
+                    `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+                const badgeTag = isOut ?
+                    `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>` :
+                    `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>`;
                 const amtClass = isOut ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold';
                 const signStr = isOut ? '-' : '+';
 
                 cashShopBody.innerHTML += `
                     <tr class="hover:bg-slate-50/80">
-                        <td class="py-2.5 px-2">
-                            ${badgeTag}
-                            <div class="text-[11px] text-slate-400">${item.date}</div>
-                        </td>
+                        <td class="py-2.5 px-2">${badgeTag}<div class="text-[11px] text-slate-400">${item.date}</div></td>
                         <td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td>
                         <td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${item.amount.toFixed(2)}</td>
                         <td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td>
@@ -1590,7 +1754,6 @@
                 `;
             });
 
-            // 4. KIRA NET PROFIT & PAPARKAN RINGKASAN
             const totalDeduction = catSewaTotal + catElektrikTotal + catAirTotal + catGajiTotal + catAisTotal + catLainTotal;
             const netProfit = totalSalesMonth - totalDeduction;
 
@@ -1618,27 +1781,22 @@
         // ============================================================
         function downloadStockPDF() {
             const dateVal = document.getElementById('stockDate').value;
-            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Hari ini';
-
+            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric',
+                month: 'long', year: 'numeric' }) : 'Hari ini';
             const categories = window.stockCategories || window.defaultCategories;
-            
             let tableHtml = '';
-            let totalItemsCount = 0;
-            let lowStockCount = 0;
-            let outOfStockCount = 0;
+            let totalItemsCount = 0,
+                lowStockCount = 0,
+                outOfStockCount = 0;
 
             Object.keys(categories).forEach(catName => {
                 const items = categories[catName] || [];
                 if (items.length === 0) return;
-
                 tableHtml += `
                     <tr style="background-color: #f1f5f9; font-weight: bold;">
-                        <td colspan="4" style="padding: 8px; border: 1px solid #cbd5e1; color: #0f172a; text-transform: uppercase; font-size: 10px;">
-                            📂 ${catName} (${items.length} item)
-                        </td>
+                        <td colspan="4" style="padding: 8px; border: 1px solid #cbd5e1; color: #0f172a; text-transform: uppercase; font-size: 10px;">📂 ${catName} (${items.length} item)</td>
                     </tr>
                 `;
-
                 items.forEach(itemObj => {
                     totalItemsCount++;
                     const itemName = itemObj.name;
@@ -1646,10 +1804,9 @@
                     const itemTarget = itemObj.target !== undefined ? itemObj.target : 5;
                     const currentQty = window.stockData[itemName] !== undefined ? window.stockData[itemName] : 5;
 
-                    let statusBg = '#ecfdf5';
-                    let statusColor = '#047857';
-                    let statusText = 'Mencukupi';
-
+                    let statusBg = '#ecfdf5',
+                        statusColor = '#047857',
+                        statusText = 'Mencukupi';
                     if (currentQty === 0) {
                         statusBg = '#fef2f2';
                         statusColor = '#dc2626';
@@ -1661,16 +1818,13 @@
                         statusText = 'Rendah';
                         lowStockCount++;
                     }
-
                     tableHtml += `
                         <tr>
                             <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: 500;">${itemName}</td>
                             <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${currentQty} ${itemUnit}</td>
                             <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; color: #0284c7; font-weight: bold;">${itemTarget} ${itemUnit}</td>
                             <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">
-                                <span style="background-color: ${statusBg}; color: ${statusColor}; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 9px; display: inline-block;">
-                                    ${statusText}
-                                </span>
+                                <span style="background-color: ${statusBg}; color: ${statusColor}; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 9px; display: inline-block;">${statusText}</span>
                             </td>
                         </tr>
                     `;
@@ -1681,164 +1835,44 @@
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html lang="ms">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Laporan Semakan Stok - ${formattedDate}</title>
-                    <style>
-                        @page { size: A4; margin: 12mm; }
-                        body { 
-                            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Arial, sans-serif; 
-                            color: #0f172a; 
-                            margin: 0; 
-                            padding: 0; 
-                            font-size: 11px;
-                            background: #ffffff;
-                        }
-                        .header-container { 
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: center; 
-                            border-bottom: 2px solid #0f172a; 
-                            padding-bottom: 12px; 
-                            margin-bottom: 16px; 
-                        }
-                        .shop-title { 
-                            font-size: 18px; 
-                            font-weight: 800; 
-                            color: #0f172a; 
-                            margin: 0; 
-                            letter-spacing: -0.5px;
-                            text-transform: uppercase;
-                        }
-                        .doc-sub { 
-                            font-size: 11px; 
-                            color: #64748b; 
-                            margin-top: 3px; 
-                        }
-                        .date-badge { 
-                            background: #2563eb; 
-                            color: #ffffff; 
-                            padding: 6px 14px; 
-                            border-radius: 8px; 
-                            font-weight: bold; 
-                            font-size: 12px; 
-                            text-align: center;
-                        }
-                        .summary-grid { 
-                            display: grid; 
-                            grid-template-columns: repeat(3, 1fr); 
-                            gap: 10px; 
-                            margin-bottom: 16px; 
-                        }
-                        .card { 
-                            background: #f8fafc; 
-                            border: 1px solid #e2e8f0; 
-                            border-radius: 10px; 
-                            padding: 10px 12px; 
-                        }
-                        .card-label { 
-                            font-size: 9px; 
-                            font-weight: 700; 
-                            color: #64748b; 
-                            text-transform: uppercase; 
-                        }
-                        .card-val { 
-                            font-size: 16px; 
-                            font-weight: 800; 
-                            margin-top: 2px; 
-                        }
-                        .stock-table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            font-size: 10px; 
-                            margin-bottom: 20px;
-                        }
-                        .stock-table th { 
-                            background: #0f172a; 
-                            color: #ffffff; 
-                            padding: 8px; 
-                            font-weight: bold; 
-                            text-align: left;
-                            text-transform: uppercase;
-                            font-size: 9px;
-                        }
-                        .footer-bar { 
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: flex-end; 
-                            margin-top: 30px; 
-                            font-size: 9px; 
-                            color: #64748b; 
-                            border-top: 1px dashed #cbd5e1; 
-                            padding-top: 12px; 
-                        }
-                        .sign-box { 
-                            text-align: center; 
-                            width: 160px; 
-                        }
-                        .sign-line { 
-                            border-bottom: 1px solid #94a3b8; 
-                            margin-top: 35px; 
-                            margin-bottom: 4px; 
-                        }
-                    </style>
+                <head><meta charset="UTF-8"><title>Laporan Semakan Stok - ${formattedDate}</title>
+                <style>
+                    @page { size: A4; margin: 12mm; }
+                    body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 11px; background: #ffffff; }
+                    .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
+                    .shop-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
+                    .doc-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+                    .date-badge { background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; text-align: center; }
+                    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+                    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; }
+                    .card-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+                    .card-val { font-size: 16px; font-weight: 800; margin-top: 2px; }
+                    .stock-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
+                    .stock-table th { background: #0f172a; color: #ffffff; padding: 8px; font-weight: bold; text-align: left; text-transform: uppercase; font-size: 9px; }
+                    .footer-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; font-size: 9px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
+                    .sign-box { text-align: center; width: 160px; }
+                    .sign-line { border-bottom: 1px solid #94a3b8; margin-top: 35px; margin-bottom: 4px; }
+                </style>
                 </head>
                 <body>
                     <div class="header-container">
-                        <div>
-                            <h1 class="shop-title">📋 Laporan Semakan Stok Harian</h1>
-                            <p class="doc-sub">Sistem Urus Niaga & Stocktake • Status Bahan, Syrup, Powder & Packaging</p>
-                        </div>
-                        <div class="date-badge">
-                            📅 ${formattedDate}
-                        </div>
+                        <div><h1 class="shop-title">📋 Laporan Semakan Stok Harian</h1><p class="doc-sub">Sistem Urus Niaga & Stocktake • Status Bahan, Syrup, Powder & Packaging</p></div>
+                        <div class="date-badge">📅 ${formattedDate}</div>
                     </div>
-
                     <div class="summary-grid">
-                        <div class="card">
-                            <div class="card-label">Jumlah Keseluruhan Item</div>
-                            <div class="card-val" style="color: #0f172a;">${totalItemsCount} Item</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">Stok Rendah (&lt; Limit)</div>
-                            <div class="card-val" style="color: #d97706;">${lowStockCount} Item</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">Stok Kehabisan (0)</div>
-                            <div class="card-val" style="color: #dc2626;">${outOfStockCount} Item</div>
-                        </div>
+                        <div class="card"><div class="card-label">Jumlah Keseluruhan Item</div><div class="card-val" style="color: #0f172a;">${totalItemsCount} Item</div></div>
+                        <div class="card"><div class="card-label">Stok Rendah (&lt; Limit)</div><div class="card-val" style="color: #d97706;">${lowStockCount} Item</div></div>
+                        <div class="card"><div class="card-label">Stok Kehabisan (0)</div><div class="card-val" style="color: #dc2626;">${outOfStockCount} Item</div></div>
                     </div>
-
                     <table class="stock-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40%;">Nama Item / Bahan</th>
-                                <th style="width: 20%; text-align: center;">Baki Semasa</th>
-                                <th style="width: 20%; text-align: center;">Target Limit</th>
-                                <th style="width: 20%; text-align: center;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableHtml}
-                        </tbody>
+                        <thead><tr><th style="width: 40%;">Nama Item / Bahan</th><th style="width: 20%; text-align: center;">Baki Semasa</th><th style="width: 20%; text-align: center;">Target Limit</th><th style="width: 20%; text-align: center;">Status</th></tr></thead>
+                        <tbody>${tableHtml}</tbody>
                     </table>
-
                     <div class="footer-bar">
-                        <div>
-                            <p style="margin: 0;">Laporan semakan stok dijana secara automatik melalui sistem cloud sync.</p>
-                            <p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p>
-                        </div>
-                        <div class="sign-box">
-                            <div class="sign-line"></div>
-                            <span>Disahkan Oleh (Staff / Boss)</span>
-                        </div>
+                        <div><p style="margin: 0;">Laporan semakan stok dijana secara automatik melalui sistem cloud sync.</p><p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p></div>
+                        <div class="sign-box"><div class="sign-line"></div><span>Disahkan Oleh (Staff / Boss)</span></div>
                     </div>
-
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                        };
-                    <\/script>
+                    <script>window.onload = function() { window.print(); };<\/script>
                 </body>
                 </html>
             `);
@@ -1853,10 +1887,8 @@
             const parts = selectedMonth.split('-');
             const yearStr = parts[0] || '';
             const monthStr = parts[1] || '';
-            
-            const monthNames = [
-                'Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 
-                'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'
+            const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September',
+                'Oktober', 'November', 'Disember'
             ];
             const monthName = monthNames[parseInt(monthStr, 10) - 1] || selectedMonth;
             const formattedMonthTitle = `${monthName} ${yearStr}`;
@@ -1865,7 +1897,6 @@
             const totalCashInShop = document.getElementById('sumNetCash').innerText;
             const totalDeduction = document.getElementById('sumTotalDeduction').innerText;
             const netProfit = document.getElementById('sumNetProfit').innerText;
-
             const expCash = document.getElementById('sumExpCash').innerText;
             const expQR = document.getElementById('sumExpQR').innerText;
 
@@ -1873,268 +1904,81 @@
             const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
             const monthCashShop = cashInShop.filter(c => c.date && c.date.startsWith(selectedMonth));
 
-            let salesTableRows = monthSales.map(s => `
-                <tr>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.date}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.desc}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #059669; font-weight: 600;">+RM ${parseFloat(s.amount).toFixed(2)}</td>
-                </tr>
-            `).join('');
+            let salesTableRows = monthSales.map(s =>
+                `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.date}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.desc}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #059669; font-weight: 600;">+RM ${parseFloat(s.amount).toFixed(2)}</td></tr>`
+            ).join('');
+            if (monthSales.length === 0) salesTableRows =
+                `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod jualan bagi bulan ini</td></tr>`;
 
-            if (monthSales.length === 0) {
-                salesTableRows = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod jualan bagi bulan ini</td></tr>`;
-            }
-
-            let expenseTableRows = monthExpenses.map(e => `
-                <tr>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.date}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;"><span style="font-size: 8.5px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #cbd5e1;">${e.method}</span> ${e.category}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.desc}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #dc2626; font-weight: 600;">-RM ${parseFloat(e.amount).toFixed(2)}</td>
-                </tr>
-            `).join('');
-
-            if (monthExpenses.length === 0) {
-                expenseTableRows = `<tr><td colspan="4" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
-            }
+            let expenseTableRows = monthExpenses.map(e =>
+                `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.date}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;"><span style="font-size: 8.5px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #cbd5e1;">${e.method}</span> ${e.category}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.desc}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #dc2626; font-weight: 600;">-RM ${parseFloat(e.amount).toFixed(2)}</td></tr>`
+            ).join('');
+            if (monthExpenses.length === 0) expenseTableRows =
+                `<tr><td colspan="4" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
 
             let cashShopTableRows = monthCashShop.map(c => {
                 const isOut = (c.type === 'out');
                 const signStr = isOut ? '-' : '+';
                 const colorStr = isOut ? '#dc2626' : '#d97706';
                 const badgeTag = isOut ? '[DUIT KELUAR] ' : '[CASH TINGGAL] ';
-                return `
-                <tr>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${c.date}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;"><strong style="color: ${colorStr};">${badgeTag}</strong>${c.desc}</td>
-                    <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${colorStr}; font-weight: 600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td>
-                </tr>
-            `}).join('');
-
-            if (monthCashShop.length === 0) {
-                cashShopTableRows = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod cash kedai bagi bulan ini</td></tr>`;
-            }
+                return `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${c.date}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;"><strong style="color: ${colorStr};">${badgeTag}</strong>${c.desc}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${colorStr}; font-weight: 600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td></tr>`;
+            }).join('');
+            if (monthCashShop.length === 0) cashShopTableRows =
+                `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod cash kedai bagi bulan ini</td></tr>`;
 
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html lang="ms">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Laporan Kewangan Lengkap - ${formattedMonthTitle}</title>
-                    <style>
-                        @page { size: A4; margin: 12mm; }
-                        body { 
-                            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Arial, sans-serif; 
-                            color: #0f172a; 
-                            margin: 0; 
-                            padding: 0; 
-                            font-size: 10px;
-                            background: #ffffff;
-                        }
-                        .header-container { 
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: center; 
-                            border-bottom: 2px solid #0f172a; 
-                            padding-bottom: 10px; 
-                            margin-bottom: 14px; 
-                        }
-                        .shop-title { 
-                            font-size: 16px; 
-                            font-weight: 800; 
-                            color: #0f172a; 
-                            margin: 0; 
-                            letter-spacing: -0.5px;
-                            text-transform: uppercase;
-                        }
-                        .doc-sub { 
-                            font-size: 10px; 
-                            color: #64748b; 
-                            margin-top: 2px; 
-                        }
-                        .month-badge { 
-                            background: #0f172a; 
-                            color: #ffffff; 
-                            padding: 5px 12px; 
-                            border-radius: 8px; 
-                            font-weight: bold; 
-                            font-size: 11px; 
-                            text-align: center;
-                        }
-                        .summary-grid { 
-                            display: grid; 
-                            grid-template-columns: repeat(4, 1fr); 
-                            gap: 8px; 
-                            margin-bottom: 16px; 
-                        }
-                        .card { 
-                            background: #f8fafc; 
-                            border: 1px solid #e2e8f0; 
-                            border-radius: 8px; 
-                            padding: 10px; 
-                        }
-                        .card-label { 
-                            font-size: 8.5px; 
-                            font-weight: 700; 
-                            color: #64748b; 
-                            text-transform: uppercase; 
-                            letter-spacing: 0.5px; 
-                        }
-                        .card-val { 
-                            font-size: 14px; 
-                            font-weight: 800; 
-                            margin-top: 3px; 
-                        }
-                        .text-emerald { color: #059669; }
-                        .text-amber { color: #d97706; }
-                        .text-rose { color: #dc2626; }
-                        .text-sky { color: #0284c7; }
-                        .section-title {
-                            font-size: 11px;
-                            font-weight: 800;
-                            color: #0f172a;
-                            border-bottom: 1.5px solid #0f172a;
-                            padding-bottom: 3px;
-                            margin-top: 14px;
-                            margin-bottom: 6px;
-                            text-transform: uppercase;
-                        }
-                        .data-table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            font-size: 9.5px;
-                            margin-bottom: 12px;
-                        }
-                        .data-table th {
-                            background: #0f172a;
-                            color: #ffffff;
-                            padding: 6px 8px;
-                            font-weight: bold;
-                            text-align: left;
-                            text-transform: uppercase;
-                            font-size: 8.5px;
-                        }
-                        .footer-bar { 
-                            display: flex; 
-                            justify-content: space-between; 
-                            align-items: flex-end; 
-                            margin-top: 24px; 
-                            font-size: 8.5px; 
-                            color: #64748b; 
-                            border-top: 1px dashed #cbd5e1; 
-                            padding-top: 10px; 
-                        }
-                        .sign-box { 
-                            text-align: center; 
-                            width: 150px; 
-                        }
-                        .sign-line { 
-                            border-bottom: 1px solid #94a3b8; 
-                            margin-top: 30px; 
-                            margin-bottom: 4px; 
-                        }
-                    </style>
+                <head><meta charset="UTF-8"><title>Laporan Kewangan Lengkap - ${formattedMonthTitle}</title>
+                <style>
+                    @page { size: A4; margin: 12mm; }
+                    body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 10px; background: #ffffff; }
+                    .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 14px; }
+                    .shop-title { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
+                    .doc-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+                    .month-badge { background: #0f172a; color: #ffffff; padding: 5px 12px; border-radius: 8px; font-weight: bold; font-size: 11px; text-align: center; }
+                    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+                    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
+                    .card-label { font-size: 8.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .card-val { font-size: 14px; font-weight: 800; margin-top: 3px; }
+                    .text-emerald { color: #059669; }
+                    .text-amber { color: #d97706; }
+                    .text-rose { color: #dc2626; }
+                    .text-sky { color: #0284c7; }
+                    .section-title { font-size: 11px; font-weight: 800; color: #0f172a; border-bottom: 1.5px solid #0f172a; padding-bottom: 3px; margin-top: 14px; margin-bottom: 6px; text-transform: uppercase; }
+                    .data-table { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-bottom: 12px; }
+                    .data-table th { background: #0f172a; color: #ffffff; padding: 6px 8px; font-weight: bold; text-align: left; text-transform: uppercase; font-size: 8.5px; }
+                    .footer-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; font-size: 8.5px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
+                    .sign-box { text-align: center; width: 150px; }
+                    .sign-line { border-bottom: 1px solid #94a3b8; margin-top: 30px; margin-bottom: 4px; }
+                </style>
                 </head>
                 <body>
-                    <div class="header-container">
-                        <div>
-                            <h1 class="shop-title">Laporan Kewangan Bulanan</h1>
-                            <p class="doc-sub">Sistem Urus Niaga & Belanja • Rekod Terperinci Sale, Belanja & Cash Kedai</p>
-                        </div>
-                        <div class="month-badge">
-                            ${formattedMonthTitle}
-                        </div>
-                    </div>
-
+                    <div class="header-container"><div><h1 class="shop-title">Laporan Kewangan Bulanan</h1><p class="doc-sub">Sistem Urus Niaga & Belanja • Rekod Terperinci Sale, Belanja & Cash Kedai</p></div><div class="month-badge">${formattedMonthTitle}</div></div>
                     <div class="summary-grid">
-                        <div class="card">
-                            <div class="card-label">Jumlah Jualan</div>
-                            <div class="card-val text-emerald">${totalSales}</div>
-                            <div style="font-size: 8px; color: #64748b; margin-top: 3px;">Total Sale Kedai</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">Baki Cash Kedai</div>
-                            <div class="card-val text-amber">${totalCashInShop}</div>
-                            <div style="font-size: 8px; color: #64748b; margin-top: 3px;">Peti Tunai / Float</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">Jumlah Kos / Belanja</div>
-                            <div class="card-val text-rose">${totalDeduction}</div>
-                            <div style="font-size: 8px; color: #64748b; margin-top: 3px;">Cash: ${expCash} | QR: ${expQR}</div>
-                        </div>
-                        <div class="card">
-                            <div class="card-label">Untung Bersih</div>
-                            <div class="card-val text-sky">${netProfit}</div>
-                        </div>
+                        <div class="card"><div class="card-label">Jumlah Jualan</div><div class="card-val text-emerald">${totalSales}</div><div style="font-size: 8px; color: #64748b; margin-top: 3px;">Total Sale Kedai</div></div>
+                        <div class="card"><div class="card-label">Baki Cash Kedai</div><div class="card-val text-amber">${totalCashInShop}</div><div style="font-size: 8px; color: #64748b; margin-top: 3px;">Peti Tunai / Float</div></div>
+                        <div class="card"><div class="card-label">Jumlah Kos / Belanja</div><div class="card-val text-rose">${totalDeduction}</div><div style="font-size: 8px; color: #64748b; margin-top: 3px;">Cash: ${expCash} | QR: ${expQR}</div></div>
+                        <div class="card"><div class="card-label">Untung Bersih</div><div class="card-val text-sky">${netProfit}</div></div>
                     </div>
-
                     <div class="section-title">📋 Rekod Jualan Harian (Total Sale)</div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 20%;">Tarikh</th>
-                                <th>Keterangan / Nota</th>
-                                <th style="width: 25%; text-align: right;">Total Sale (RM)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${salesTableRows}
-                        </tbody>
-                    </table>
-
+                    <table class="data-table"><thead><tr><th style="width: 20%;">Tarikh</th><th>Keterangan / Nota</th><th style="width: 25%; text-align: right;">Total Sale (RM)</th></tr></thead><tbody>${salesTableRows}</tbody></table>
                     <div class="section-title">🧾 Rekod Resit & Perbelanjaan</div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 18%;">Tarikh</th>
-                                <th style="width: 28%;">Kaedah / Kategori</th>
-                                <th>Keterangan / Penerima</th>
-                                <th style="width: 22%; text-align: right;">Jumlah (RM)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${expenseTableRows}
-                        </tbody>
-                    </table>
-
+                    <table class="data-table"><thead><tr><th style="width: 18%;">Tarikh</th><th style="width: 28%;">Kaedah / Kategori</th><th>Keterangan / Penerima</th><th style="width: 22%; text-align: right;">Jumlah (RM)</th></tr></thead><tbody>${expenseTableRows}</tbody></table>
                     <div class="section-title">🏪 Rekod Cash Kedai (Duit Tinggal & Duit Keluar)</div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 20%;">Tarikh</th>
-                                <th>Catatan / Nota Transaksi</th>
-                                <th style="width: 25%; text-align: right;">Jumlah (RM)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${cashShopTableRows}
-                        </tbody>
-                    </table>
-
-                    <div class="footer-bar">
-                        <div>
-                            <p style="margin: 0;">Laporan kewangan terperinci ini dijana secara automatik melalui sistem cloud sync.</p>
-                            <p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p>
-                        </div>
-                        <div class="sign-box">
-                            <div class="sign-line"></div>
-                            <span>Disahkan Oleh (Staff / Boss)</span>
-                        </div>
-                    </div>
-
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                        };
-                    <\/script>
+                    <table class="data-table"><thead><tr><th style="width: 20%;">Tarikh</th><th>Catatan / Nota Transaksi</th><th style="width: 25%; text-align: right;">Jumlah (RM)</th></tr></thead><tbody>${cashShopTableRows}</tbody></table>
+                    <div class="footer-bar"><div><p style="margin: 0;">Laporan kewangan terperinci ini dijana secara automatik melalui sistem cloud sync.</p><p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p></div><div class="sign-box"><div class="sign-line"></div><span>Disahkan Oleh (Staff / Boss)</span></div></div>
+                    <script>window.onload = function() { window.print(); };<\/script>
                 </body>
                 </html>
             `);
             printWindow.document.close();
         }
 
-        // Inisialisasi setelah DOM siap
+        // ============================================================
+        // INISIALISASI
+        // ============================================================
         window.addEventListener('DOMContentLoaded', () => {
             if (!currentRole) {
                 // Biarkan onAuthStateChanged mengendalikan
@@ -2146,3 +1990,4 @@
     </script>
 </body>
 </html>
+`
