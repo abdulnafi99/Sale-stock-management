@@ -10,6 +10,8 @@
     <!-- Firebase v9 compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -195,7 +197,6 @@
                             <option value="Cash">💵 Cash (Tunai)</option>
                             <option value="QR">📱 QR Pay</option>
                             <option value="Touch n Go">💳 Touch 'n Go</option>
-                            <option value="shopee">💵 shopeepay</option>
                         </select>
                     </div>
                     <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Kategori</label>
@@ -423,7 +424,7 @@
         </div>
     </div>
 
-    <!-- ===== POPUP MODAL LOG MASUK (AUTHENTICATION) ===== -->
+    <!-- ===== POPUP MODAL LOG MASUK (Google Sign-In) ===== -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out opacity-0 pointer-events-none">
         <div id="loginModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 sm:p-8 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             <div class="text-center mb-6">
@@ -432,27 +433,17 @@
                     <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBeQ5VvYxL8jRrcsSojKoN45P7SB2CSWu1cYEmpSmTtg&s" alt="Logo Kedai" class="w-20 h-20 object-contain rounded-2xl p-1 bg-slate-50 border border-slate-100 shadow-xs" />
                 </div>
                 <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Log Masuk Sistem</h2>
-                <p class="text-xs text-slate-500 mt-1">Sila masukkan ID Pengguna & Kata Laluan</p>
+                <p class="text-xs text-slate-500 mt-1">Sila log masuk menggunakan akaun Google anda.</p>
             </div>
 
-            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">ID Pengguna (Username)</label>
-                    <input type="text" id="loginUsername" required placeholder="Cth: admin / selagi" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50 font-medium">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kata Laluan (Password)</label>
-                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full p-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50 font-medium">
-                </div>
+            <button onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-50 active:scale-95 text-slate-700 font-semibold py-3 rounded-xl text-sm transition-all shadow-md border border-slate-200 flex items-center justify-center gap-3">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5" />
+                🔑 Log Masuk dengan Google
+            </button>
 
-                <div id="loginError" class="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3 text-center hidden font-semibold">
-                    ❌ ID Pengguna atau Kata Laluan Salah!
-                </div>
-
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md mt-2">
-                    Log Masuk 🚀
-                </button>
-            </form>
+            <div id="loginError" class="mt-4 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3 text-center hidden font-semibold">
+                ❌ Ralat log masuk. Sila cuba lagi.
+            </div>
         </div>
     </div>
 
@@ -584,15 +575,17 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
+        const firestore = firebase.firestore();
 
         // ============================================================
-        // SISTEM LOG MASUK
+        // UID BOSS (dikenali secara automatik)
         // ============================================================
-        const USER_CREDENTIALS = {
-            'admin': { pass: 'Admin24', role: 'staff', name: 'Staff (Admin)' },
-            'selagi': { pass: 'Selagi24', role: 'boss', name: 'Boss' }
-        };
+        const BOSS_UID = 'd1EQYb90teNgscI6sC9wAMsgdFa2';
 
+        // ============================================================
+        // SISTEM LOG MASUK (Google Sign-In)
+        // ============================================================
         let currentRole = sessionStorage.getItem('user_role') || null;
 
         function openLoginModal() {
@@ -619,32 +612,122 @@
             }, 200);
         }
 
-        function handleLogin(e) {
-            e.preventDefault();
-            const u = document.getElementById('loginUsername').value.trim();
-            const p = document.getElementById('loginPassword').value.trim();
-            const errDiv = document.getElementById('loginError');
+        function loginWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then((result) => {
+                    const user = result.user;
+                    // Tentukan peranan: jika UID adalah boss, set boss
+                    let role = 'staff';
+                    let displayName = user.displayName || user.email;
+                    
+                    if (user.uid === BOSS_UID) {
+                        role = 'boss';
+                    }
 
-            if (USER_CREDENTIALS[u] && USER_CREDENTIALS[u].pass === p) {
-                currentRole = USER_CREDENTIALS[u].role;
-                sessionStorage.setItem('user_role', currentRole);
-                sessionStorage.setItem('user_name', USER_CREDENTIALS[u].name);
-                errDiv.classList.add('hidden');
-                closeLoginModal();
-                applyRoleUI();
-                showToast(`Selamat Datang, ${USER_CREDENTIALS[u].name}!`);
-            } else {
-                errDiv.classList.remove('hidden');
-            }
+                    // Dapatkan peranan dari Firestore (tapi override dengan boss jika UID boss)
+                    firestore.collection('users').doc(user.uid).get()
+                        .then((doc) => {
+                            if (doc.exists) {
+                                // Jika UID boss, tetap set boss, abaikan dari Firestore
+                                if (user.uid !== BOSS_UID) {
+                                    role = doc.data().role || 'staff';
+                                    displayName = doc.data().displayName || user.displayName || user.email;
+                                } else {
+                                    // Pastikan Firestore diselaraskan dengan role boss
+                                    if (doc.data().role !== 'boss') {
+                                        firestore.collection('users').doc(user.uid).update({ role: 'boss' });
+                                    }
+                                    displayName = doc.data().displayName || user.displayName || user.email;
+                                }
+                            } else {
+                                // Buat rekod pengguna baharu dengan role yang betul
+                                firestore.collection('users').doc(user.uid).set({
+                                    role: role,
+                                    displayName: displayName,
+                                    email: user.email
+                                });
+                            }
+                            sessionStorage.setItem('user_role', role);
+                            sessionStorage.setItem('user_name', displayName);
+                            currentRole = role;
+                            closeLoginModal();
+                            applyRoleUI();
+                            showToast('👋 Selamat Datang, ' + displayName);
+                        })
+                        .catch((err) => {
+                            console.error('Ralat baca Firestore:', err);
+                            showToast('❌ Ralat mendapatkan peranan pengguna.');
+                        });
+                })
+                .catch((error) => {
+                    console.error('Ralat log masuk Google:', error);
+                    document.getElementById('loginError').innerText = '❌ Ralat: ' + error.message;
+                    document.getElementById('loginError').classList.remove('hidden');
+                });
         }
 
         function handleLogout() {
-            sessionStorage.removeItem('user_role');
-            sessionStorage.removeItem('user_name');
-            currentRole = null;
-            document.getElementById('loginForm').reset();
-            openLoginModal();
+            auth.signOut().then(() => {
+                sessionStorage.removeItem('user_role');
+                sessionStorage.removeItem('user_name');
+                currentRole = null;
+                showToast('👋 Anda telah log keluar.');
+                openLoginModal();
+            }).catch((error) => {
+                console.error('Logout error:', error);
+                showToast('❌ Gagal log keluar.');
+            });
         }
+
+        // Auto-login state
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Pengguna sudah log masuk, semak peranan
+                let role = 'staff';
+                let displayName = user.displayName || user.email;
+                
+                if (user.uid === BOSS_UID) {
+                    role = 'boss';
+                }
+
+                firestore.collection('users').doc(user.uid).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            if (user.uid !== BOSS_UID) {
+                                role = doc.data().role || 'staff';
+                                displayName = doc.data().displayName || user.displayName || user.email;
+                            } else {
+                                // Pastikan Firestore selaras
+                                if (doc.data().role !== 'boss') {
+                                    firestore.collection('users').doc(user.uid).update({ role: 'boss' });
+                                }
+                                displayName = doc.data().displayName || user.displayName || user.email;
+                            }
+                        } else {
+                            // Buat rekod baharu
+                            firestore.collection('users').doc(user.uid).set({
+                                role: role,
+                                displayName: displayName,
+                                email: user.email
+                            });
+                        }
+                        sessionStorage.setItem('user_role', role);
+                        sessionStorage.setItem('user_name', displayName);
+                        currentRole = role;
+                        closeLoginModal();
+                        applyRoleUI();
+                    })
+                    .catch((err) => {
+                        console.error('Ralat baca Firestore (onAuth):', err);
+                    });
+            } else {
+                // Tiada pengguna, buka modal login
+                if (!sessionStorage.getItem('user_role')) {
+                    openLoginModal();
+                }
+            }
+        });
 
         function applyRoleUI() {
             const userName = sessionStorage.getItem('user_name') || 'Pengguna';
@@ -680,16 +763,6 @@
             renderStockTable();
             initChatSystem();
         }
-
-        // Auto Open Login jika belum login
-        window.addEventListener('DOMContentLoaded', () => {
-            if (!currentRole) {
-                openLoginModal();
-            } else {
-                applyRoleUI();
-            }
-            initMasterStockListener();
-        });
 
         // ============================================================
         // MODAL CASH KEDAI
@@ -2060,6 +2133,16 @@
             `);
             printWindow.document.close();
         }
+
+        // Inisialisasi setelah DOM siap
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!currentRole) {
+                // Biarkan onAuthStateChanged mengendalikan
+            } else {
+                applyRoleUI();
+            }
+            initMasterStockListener();
+        });
     </script>
 </body>
 </html>
