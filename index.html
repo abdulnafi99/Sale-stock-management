@@ -5,138 +5,156 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
+    <!-- ============================================================
+         EMBEDDED PWA (Manifest + Service Worker dalam HTML)
+         ============================================================ -->
+    <script>
+    (function () {
+      // ---------- 1) IKON SVG DATA URL ----------
+      const ICON_192 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f172a'/%3E%3Ctext x='96' y='132' font-size='120' text-anchor='middle'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E";
+      const ICON_512 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f172a'/%3E%3Ctext x='256' y='350' font-size='320' text-anchor='middle'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E";
+
+      // ---------- 2) MANIFEST (embedded) ----------
+      const manifestData = {
+        name: "Sistem Urus Niaga & Stocktake",
+        short_name: "UrusNiaga",
+        description: "Sistem Urus Niaga, Belanja, Stocktake & Cash Kedai dengan auto-sync cloud.",
+        start_url: "./",
+        scope: "./",
+        display: "standalone",
+        orientation: "portrait",
+        background_color: "#0f172a",
+        theme_color: "#0f172a",
+        lang: "ms",
+        icons: [
+          { src: ICON_192, sizes: "192x192", type: "image/svg+xml", purpose: "any" },
+          { src: ICON_192, sizes: "192x192", type: "image/svg+xml", purpose: "maskable" },
+          { src: ICON_512, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+          { src: ICON_512, sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
+        ]
+      };
+
+      let manifestURL = null;
+      try {
+        const blob = new Blob([JSON.stringify(manifestData)], { type: "application/manifest+json" });
+        manifestURL = URL.createObjectURL(blob);
+      } catch (e) { console.warn("Manifest blob gagal:", e); }
+
+      // ---------- 3) SERVICE WORKER CODE (embedded) ----------
+      const SW_CODE = `
+        const CACHE_NAME = 'urusniaga-v1';
+        const RUNTIME_CACHE = 'urusniaga-runtime-v1';
+
+        self.addEventListener('install', (e) => { self.skipWaiting(); });
+        self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
+
+        self.addEventListener('fetch', (event) => {
+          const req = event.request;
+          if (req.method !== 'GET') return;
+          const url = req.url;
+          if (
+            url.includes('firebaseio.com') ||
+            url.includes('firestore.googleapis.com') ||
+            url.includes('identitytoolkit.googleapis.com') ||
+            url.includes('securetoken.googleapis.com') ||
+            url.includes('gstatic.com') === false && !url.startsWith('http')
+          ) return;
+
+          event.respondWith(
+            caches.match(req).then((cached) => {
+              if (cached) return cached;
+              return fetch(req).then((res) => {
+                if (res && res.status === 200 && (res.type === 'basic' || res.type === 'cors')) {
+                  const copy = res.clone();
+                  caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy));
+                }
+                return res;
+              }).catch(() => cached);
+            })
+          );
+        });
+      `;
+
+      // ---------- 4) PASANG MANIFEST KE <head> ----------
+      function attachManifest() {
+        if (!manifestURL) return;
+        let link = document.querySelector('link[rel="manifest"]');
+        if (link) {
+          link.href = manifestURL;
+        } else {
+          link = document.createElement("link");
+          link.rel = "manifest";
+          link.href = manifestURL;
+          document.head.appendChild(link);
+        }
+      }
+      if (document.head) attachManifest();
+      else document.addEventListener("DOMContentLoaded", attachManifest);
+
+      // ---------- 5) DAFTAR SERVICE WORKER ----------
+      if ("serviceWorker" in navigator) {
+        let swBlobURL = null;
+        try {
+          const swBlob = new Blob([SW_CODE], { type: "application/javascript" });
+          swBlobURL = URL.createObjectURL(swBlob);
+        } catch (e) { console.warn("SW blob gagal:", e); }
+
+        window.addEventListener("load", () => {
+          // Cuba fail luaran dahulu, kalau tiada baru guna blob
+          navigator.serviceWorker.register("service-worker.js", { scope: "./" })
+            .then((reg) => console.log("✅ SW (fail) berdaftar:", reg.scope))
+            .catch(() => {
+              if (!swBlobURL) return;
+              return navigator.serviceWorker.register(swBlobURL)
+                .then((reg) => console.log("✅ SW (blob) berdaftar:", reg.scope))
+                .catch((err) => console.warn("⚠️ SW gagal sepenuhnya:", err));
+            });
+        });
+      }
+    })();
+    </script>
+
     <!-- ===== PWA META ===== -->
     <meta name="theme-color" content="#0f172a" />
     <meta name="description" content="Sistem Urus Niaga, Belanja, Stocktake & Cash Kedai dengan auto-sync cloud." />
-    <link rel="manifest" href="manifest.json" />
+    <!-- <link rel="manifest" href="manifest.json" /> JS akan override ini -->
 
     <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="UrusNiaga" />
-    <link rel="apple-touch-icon" href="icons/icon-192.png" />
-
-    <!-- Ikon -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
 
     <title>Sistem Urus Niaga & Stocktake (Email Login)</title>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-    <!-- Firebase v9 compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .qty-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            transition: all 0.15s ease;
-        }
-        .qty-btn:hover {
-            background: #e2e8f0;
-        }
-        .qty-btn:active {
-            transform: scale(0.92);
-        }
-        .qty-input {
-            width: 68px;
-            height: 32px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-weight: 600;
-        }
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-block;
-        }
-        .status-full {
-            background: #ecfdf5;
-            color: #10b981;
-        }
-        .status-warning {
-            background: #fffbeb;
-            color: #f59e0b;
-        }
-        .status-danger {
-            background: #fef2f2;
-            color: #ef4444;
-        }
-        .bg-slate-800\/60 {
-            background: rgba(30, 41, 59, 0.6);
-        }
-        @keyframes popIn {
-            0% {
-                transform: scale(0.8) translateY(20px);
-                opacity: 0;
-            }
-            100% {
-                transform: scale(1) translateY(0);
-                opacity: 1;
-            }
-        }
-        .animate-pop-in {
-            animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        /* Toggle password visibility */
-        .toggle-pwd {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        /* Login/Register tab style */
-        .auth-tab {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .auth-tab.active {
-            border-bottom: 3px solid #0f172a;
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .auth-tab.inactive {
-            color: #94a3b8;
-            border-bottom: 3px solid transparent;
-        }
-        .auth-tab.inactive:hover {
-            color: #475569;
-            border-bottom: 3px solid #cbd5e1;
-        }
-        .auth-panel {
-            display: none;
-        }
-        .auth-panel.active {
-            display: block;
-        }
-
-        /* PWA: Safe area untuk peranti notch */
-        body {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .qty-btn { width:32px; height:32px; border-radius:6px; border:1px solid #e2e8f0; background:#f8fafc; font-size:1.1rem; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; user-select:none; transition:all .15s ease; }
+        .qty-btn:hover { background:#e2e8f0; }
+        .qty-btn:active { transform:scale(.92); }
+        .qty-input { width:68px; height:32px; text-align:center; border:1px solid #e2e8f0; border-radius:6px; font-size:.95rem; font-weight:600; }
+        .status-badge { padding:4px 10px; border-radius:20px; font-size:.75rem; font-weight:600; display:inline-block; }
+        .status-full { background:#ecfdf5; color:#10b981; }
+        .status-warning { background:#fffbeb; color:#f59e0b; }
+        .status-danger { background:#fef2f2; color:#ef4444; }
+        .bg-slate-800\/60 { background:rgba(30,41,59,.6); }
+        @keyframes popIn { 0%{transform:scale(.8) translateY(20px); opacity:0;} 100%{transform:scale(1) translateY(0); opacity:1;} }
+        .animate-pop-in { animation:popIn .25s cubic-bezier(.16,1,.3,1) forwards; }
+        .toggle-pwd { cursor:pointer; user-select:none; }
+        .auth-tab { cursor:pointer; transition:all .2s; }
+        .auth-tab.active { border-bottom:3px solid #0f172a; font-weight:700; color:#0f172a; }
+        .auth-tab.inactive { color:#94a3b8; border-bottom:3px solid transparent; }
+        .auth-tab.inactive:hover { color:#475569; border-bottom:3px solid #cbd5e1; }
+        .auth-panel { display:none; }
+        .auth-panel.active { display:block; }
+        body { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-16">
@@ -153,40 +171,29 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <span id="roleBadge" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center gap-1 shadow-2xs">
-                    👤 Staff
-                </span>
+                <span id="roleBadge" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center gap-1 shadow-2xs">👤 Staff</span>
 
                 <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                     <span class="text-xs font-semibold text-slate-600 px-1">Bulan:</span>
                     <input type="month" id="filterMonth" onchange="renderFinance()" class="bg-white text-xs font-medium text-slate-700 py-1 px-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
 
-                <!-- Butang Install PWA -->
-                <button id="btnInstallPWA" onclick="installPWA()" class="hidden text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white border border-emerald-500 transition-all flex items-center gap-1.5 shadow-sm">
-                    ⬇️ Install App
-                </button>
+                <button id="btnInstallPWA" onclick="installPWA()" class="hidden text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white border border-emerald-500 transition-all flex items-center gap-1.5 shadow-sm">⬇️ Install App</button>
 
-                <!-- Status Offline -->
-                <span id="offlineBadge" class="hidden text-xs font-bold px-3 py-1.5 rounded-xl bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">
-                    📴 Offline
-                </span>
+                <span id="offlineBadge" class="hidden text-xs font-bold px-3 py-1.5 rounded-xl bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">📴 Offline</span>
 
                 <button onclick="toggleChatModal()" class="relative text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 border border-indigo-200 transition-all flex items-center gap-1.5">
                     💬 Mesej
                     <span id="unreadBadgeNav" class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold animate-bounce">0</span>
                 </button>
 
-                <button onclick="handleLogout()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200 transition-all flex items-center gap-1">
-                    🚪 Log Keluar
-                </button>
+                <button onclick="handleLogout()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 border border-rose-200 transition-all flex items-center gap-1">🚪 Log Keluar</button>
             </div>
         </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Banner Notis Mod Boss -->
         <div id="bossBanner" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4 flex items-center justify-between shadow-2xs">
             <div class="flex items-center gap-3">
                 <span class="text-2xl">👑</span>
@@ -198,7 +205,6 @@
             <span class="text-xs font-bold bg-amber-200/80 px-2.5 py-1 rounded-lg">Semakan Sahaja</span>
         </div>
 
-        <!-- KAD TRIGGER SEMAKAN STOK & PETI TUNAI -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-5 shadow-md border border-blue-500 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div class="space-y-1">
@@ -209,9 +215,7 @@
                     <h2 class="text-lg font-bold">📋 Semakan Stok Harian</h2>
                     <p class="text-xs text-blue-100">Kemaskini baki Susu, syrup, cawan & packaging.</p>
                 </div>
-                <button onclick="openStockModal()" class="w-full sm:w-auto bg-white text-blue-700 hover:bg-blue-50 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">
-                    📦 Buka Stocktake ✨
-                </button>
+                <button onclick="openStockModal()" class="w-full sm:w-auto bg-white text-blue-700 hover:bg-blue-50 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">📦 Buka Stocktake ✨</button>
             </div>
 
             <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-5 shadow-md border border-amber-400 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -223,20 +227,14 @@
                     <h2 class="text-lg font-bold">🏪 Key-in Cash Kedai</h2>
                     <p class="text-xs text-amber-100">Rekod duit tinggal (Float) & duit keluar dari kedai.</p>
                 </div>
-                <button onclick="openCashShopModal()" class="w-full sm:w-auto bg-slate-900 text-amber-300 hover:bg-slate-800 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">
-                    💰 Urus Cash Kedai ✨
-                </button>
+                <button onclick="openCashShopModal()" class="w-full sm:w-auto bg-slate-900 text-amber-300 hover:bg-slate-800 active:scale-95 font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 shrink-0">💰 Urus Cash Kedai ✨</button>
             </div>
         </div>
 
-        <!-- Borang Input Kemas (Staff sahaja) -->
         <div id="formsSection" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Borang 1: Jualan -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 sm:p-6">
                 <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                    <h2 class="font-bold text-slate-900 flex items-center gap-2 text-base">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Key-in Total Sale Harian
-                    </h2>
+                    <h2 class="font-bold text-slate-900 flex items-center gap-2 text-base"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Key-in Total Sale Harian</h2>
                     <span class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">Pendapatan</span>
                 </div>
                 <form id="salesForm" onsubmit="addSales(event)" class="space-y-4">
@@ -247,12 +245,9 @@
                 </form>
             </div>
 
-            <!-- Borang 2: Belanja -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 sm:p-6">
                 <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-                    <h2 class="font-bold text-slate-900 flex items-center gap-2 text-base">
-                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Key-in Resit & Belanja
-                    </h2>
+                    <h2 class="font-bold text-slate-900 flex items-center gap-2 text-base"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Key-in Resit & Belanja</h2>
                     <span class="text-[11px] font-semibold bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full">Perbelanjaan</span>
                 </div>
                 <form id="expenseForm" onsubmit="addExpense(event)" class="space-y-4">
@@ -282,9 +277,7 @@
             </div>
         </div>
 
-        <!-- Jadual Sejarah - Grid 3 Ruang -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Sejarah Jualan -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5">
                 <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span>📋 Sejarah Jualan</span><span id="salesCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
@@ -295,7 +288,6 @@
                 </div>
             </div>
 
-            <!-- Sejarah Resit & Belanja -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5">
                 <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span>🧾 Sejarah Resit & Belanja</span><span id="expCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
@@ -306,7 +298,6 @@
                 </div>
             </div>
 
-            <!-- Sejarah Cash Kedai -->
             <div class="bg-white rounded-2xl shadow-xs border border-amber-200 p-5">
                 <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span class="text-amber-800">🏪 Sejarah Cash Kedai</span><span id="cashShopCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
@@ -318,7 +309,6 @@
             </div>
         </div>
 
-        <!-- ===== RINGKASAN KEWANGAN ===== -->
         <section class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 shadow-lg border border-slate-800 space-y-6">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-800">
                 <div><h2 class="text-xl font-bold tracking-tight flex items-center gap-2">📊 Ringkasan Kewangan Bulanan</h2><p class="text-xs text-slate-400">Analisis jualan, tunai di kedai & pecahan perbelanjaan</p></div>
@@ -380,7 +370,7 @@
         </section>
     </main>
 
-    <!-- ===== POPUP MODAL CASH KEDAI ===== -->
+    <!-- Modal Cash Kedai -->
     <div id="cashShopModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 ease-out">
         <div id="cashShopModalBox" class="bg-white rounded-3xl shadow-2xl border border-amber-100 w-full max-w-lg p-6 sm:p-7 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             <div class="flex items-center justify-between mb-5 pb-3 border-b border-slate-100">
@@ -411,7 +401,7 @@
         </div>
     </div>
 
-    <!-- ===== BUTANG FLOATING CHAT ===== -->
+    <!-- Chat floating -->
     <div class="fixed bottom-5 right-5 z-40">
         <button onclick="toggleChatModal()" class="relative bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 text-white p-3.5 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-indigo-400/30">
             <span class="text-2xl">💬</span>
@@ -419,7 +409,7 @@
         </button>
     </div>
 
-    <!-- ===== POPUP DRAWER CHAT ===== -->
+    <!-- Chat drawer -->
     <div id="chatDrawerContainer" class="fixed inset-0 z-50 pointer-events-none transition-all duration-300">
         <div id="chatBackdrop" onclick="toggleChatModal()" class="absolute inset-0 bg-slate-900/40 opacity-0 transition-opacity duration-300"></div>
         <div id="chatDrawer" class="absolute top-0 right-0 bottom-0 w-full sm:w-96 bg-white shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col pointer-events-auto">
@@ -448,7 +438,7 @@
         </div>
     </div>
 
-    <!-- ===== POPUP MODAL LOG MASUK (EMAIL + PASSWORD) ===== -->
+    <!-- Login modal -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out opacity-0 pointer-events-none">
         <div id="loginModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md p-6 sm:p-8 transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             <div class="text-center mb-5">
@@ -459,13 +449,11 @@
                 <p class="text-xs text-slate-500 mt-1">Gunakan emel & kata laluan untuk akses.</p>
             </div>
 
-            <!-- Tabs: Login / Daftar -->
             <div class="flex border-b border-slate-200 mb-5">
                 <div id="tabLogin" class="auth-tab active flex-1 text-center py-2 text-sm font-semibold" onclick="switchAuthTab('login')">🔑 Log Masuk</div>
                 <div id="tabRegister" class="auth-tab inactive flex-1 text-center py-2 text-sm font-semibold" onclick="switchAuthTab('register')">📝 Daftar Akaun</div>
             </div>
 
-            <!-- Panel Login -->
             <div id="panelLogin" class="auth-panel active">
                 <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
                     <div>
@@ -484,7 +472,6 @@
                 </form>
             </div>
 
-            <!-- Panel Pendaftaran -->
             <div id="panelRegister" class="auth-panel">
                 <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4">
                     <div>
@@ -514,7 +501,7 @@
         </div>
     </div>
 
-    <!-- ===== POPUP MODAL STOCKTAKE ===== -->
+    <!-- Stock modal -->
     <div id="stockModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 opacity-0 pointer-events-none transition-all duration-300 ease-out">
         <div id="stockModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-5xl max-h-[90vh] flex flex-col transform scale-90 transition-all duration-300 ease-out overflow-hidden">
             <div class="p-5 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center sticky top-0 z-10">
@@ -592,24 +579,15 @@
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm hidden z-50">✅ Disalin!</div>
 
-    <!-- ======== JAVASCRIPT ======== -->
+    <!-- ======== JAVASCRIPT (bahagian logik app - kekal sama) ======== -->
     <script>
-        // Toast
         function showToast(msg) {
             const toast = document.getElementById('toast');
-            if (toast) {
-                toast.innerText = msg;
-                toast.classList.remove('hidden');
-                setTimeout(() => { toast.classList.add('hidden'); }, 3000);
-            }
+            if (toast) { toast.innerText = msg; toast.classList.remove('hidden'); setTimeout(() => { toast.classList.add('hidden'); }, 3000); }
         }
 
-        // ============================================================
-        // KONFIGURASI FIREBASE
-        // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyCk8K_7YE4pEYncbJwpmdDm7KkEQWTT9Zk",
             authDomain: "bulanan-sale.firebaseapp.com",
@@ -626,125 +604,75 @@
         const auth = firebase.auth();
         const firestore = firebase.firestore();
 
-        // ============================================================
-        // BOSS EMAIL (tetap)
-        // ============================================================
-        const BOSS_EMAIL = 'Boss@selagicoffee.com'; // Emel Boss tetap
-
+        const BOSS_EMAIL = 'Boss@selagicoffee.com';
         let currentRole = sessionStorage.getItem('user_role') || null;
         let currentUserEmail = sessionStorage.getItem('user_email') || null;
 
-        // ============================================================
-        // FUNGSI SIMPAN PERANAN KE REALTIME DATABASE
-        // ============================================================
         function saveRoleToRTDB(uid, role, displayName, email) {
-            db.ref('users/' + uid).set({
-                role: role,
-                displayName: displayName,
-                email: email,
-                updatedAt: new Date().toISOString()
-            }).catch(err => console.error('Gagal simpan role ke RTDB:', err));
+            db.ref('users/' + uid).set({ role, displayName, email, updatedAt: new Date().toISOString() })
+                .catch(err => console.error('Gagal simpan role:', err));
         }
 
-        // ============================================================
-        // FUNGSI TOGGLE PASSWORD VISIBILITY
-        // ============================================================
         function togglePwd(inputId, el) {
-            const inp = document.getElementById(inputId);
-            if (!inp) return;
-            if (inp.type === 'password') {
-                inp.type = 'text';
-                el.textContent = '🙈';
-            } else {
-                inp.type = 'password';
-                el.textContent = '👁️';
-            }
+            const inp = document.getElementById(inputId); if (!inp) return;
+            if (inp.type === 'password') { inp.type = 'text'; el.textContent = '🙈'; }
+            else { inp.type = 'password'; el.textContent = '👁️'; }
         }
 
-        // ============================================================
-        // TAB SWITCH LOGIN / REGISTER
-        // ============================================================
         function switchAuthTab(tab) {
             const tabLogin = document.getElementById('tabLogin');
             const tabRegister = document.getElementById('tabRegister');
             const panelLogin = document.getElementById('panelLogin');
             const panelRegister = document.getElementById('panelRegister');
-
             if (tab === 'login') {
                 tabLogin.className = 'auth-tab active flex-1 text-center py-2 text-sm font-semibold';
                 tabRegister.className = 'auth-tab inactive flex-1 text-center py-2 text-sm font-semibold';
-                panelLogin.classList.add('active');
-                panelLogin.classList.remove('hidden');
-                panelRegister.classList.remove('active');
-                panelRegister.classList.add('hidden');
+                panelLogin.classList.add('active'); panelLogin.classList.remove('hidden');
+                panelRegister.classList.remove('active'); panelRegister.classList.add('hidden');
             } else {
                 tabRegister.className = 'auth-tab active flex-1 text-center py-2 text-sm font-semibold';
                 tabLogin.className = 'auth-tab inactive flex-1 text-center py-2 text-sm font-semibold';
-                panelRegister.classList.add('active');
-                panelRegister.classList.remove('hidden');
-                panelLogin.classList.remove('active');
-                panelLogin.classList.add('hidden');
+                panelRegister.classList.add('active'); panelRegister.classList.remove('hidden');
+                panelLogin.classList.remove('active'); panelLogin.classList.add('hidden');
             }
-            // Sembunyikan error
             document.getElementById('loginError').classList.add('hidden');
             document.getElementById('registerError').classList.add('hidden');
         }
 
-        // ============================================================
-        // SISTEM LOG MASUK (EMAIL + PASSWORD)
-        // ============================================================
         function openLoginModal() {
             const modal = document.getElementById('loginModal');
             const box = document.getElementById('loginModalBox');
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.classList.add('opacity-100');
-            setTimeout(() => {
-                box.classList.remove('scale-90');
-                box.classList.add('scale-100');
-            }, 50);
+            setTimeout(() => { box.classList.remove('scale-90'); box.classList.add('scale-100'); }, 50);
             document.body.style.overflow = 'hidden';
         }
-
         function closeLoginModal() {
             const modal = document.getElementById('loginModal');
             const box = document.getElementById('loginModalBox');
-            box.classList.remove('scale-100');
-            box.classList.add('scale-90');
-            setTimeout(() => {
-                modal.classList.remove('opacity-100');
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                document.body.style.overflow = 'auto';
-            }, 200);
+            box.classList.remove('scale-100'); box.classList.add('scale-90');
+            setTimeout(() => { modal.classList.remove('opacity-100'); modal.classList.add('opacity-0', 'pointer-events-none'); document.body.style.overflow = 'auto'; }, 200);
         }
 
-        // Login handler
         function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
             const errorEl = document.getElementById('loginError');
-
             errorEl.classList.add('hidden');
-
             auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    determineAndSetRole(user, email);
-                })
+                .then((cred) => determineAndSetRole(cred.user, email))
                 .catch((error) => {
-                    console.error('Login error:', error);
                     let msg = '❌ Ralat log masuk: ';
                     if (error.code === 'auth/user-not-found') msg += 'Emel tidak berdaftar.';
                     else if (error.code === 'auth/wrong-password') msg += 'Kata laluan salah.';
                     else if (error.code === 'auth/invalid-email') msg += 'Emel tidak sah.';
-                    else if (error.code === 'auth/too-many-requests') msg += 'Terlalu banyak percubaan. Sila cuba sebentar lagi.';
+                    else if (error.code === 'auth/too-many-requests') msg += 'Terlalu banyak percubaan.';
                     else msg += error.message;
-                    errorEl.innerText = msg;
-                    errorEl.classList.remove('hidden');
+                    errorEl.innerText = msg; errorEl.classList.remove('hidden');
                 });
         }
 
-        // Register handler
         function handleRegister(e) {
             e.preventDefault();
             const name = document.getElementById('regName').value.trim();
@@ -752,204 +680,123 @@
             const password = document.getElementById('regPassword').value;
             const confirm = document.getElementById('regConfirm').value;
             const errorEl = document.getElementById('registerError');
-
             errorEl.classList.add('hidden');
-
-            if (password !== confirm) {
-                errorEl.innerText = '❌ Kata laluan tidak sepadan.';
-                errorEl.classList.remove('hidden');
-                return;
-            }
-            if (password.length < 6) {
-                errorEl.innerText = '❌ Kata laluan mestilah sekurang-kurangnya 6 aksara.';
-                errorEl.classList.remove('hidden');
-                return;
-            }
-
+            if (password !== confirm) { errorEl.innerText = '❌ Kata laluan tidak sepadan.'; errorEl.classList.remove('hidden'); return; }
+            if (password.length < 6) { errorEl.innerText = '❌ Kata laluan min 6 aksara.'; errorEl.classList.remove('hidden'); return; }
             auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    let role = 'staff';
-                    if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
-                        role = 'boss';
-                    }
+                .then((cred) => {
+                    const user = cred.user;
+                    let role = email.toLowerCase() === BOSS_EMAIL.toLowerCase() ? 'boss' : 'staff';
                     return firestore.collection('users').doc(user.uid).set({
-                        role: role,
-                        displayName: name,
-                        email: email,
-                        createdAt: new Date().toISOString()
+                        role, displayName: name, email, createdAt: new Date().toISOString()
                     }).then(() => {
-                        // Simpan ke Realtime Database juga
                         saveRoleToRTDB(user.uid, role, name, email);
-
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', name);
                         sessionStorage.setItem('user_email', email);
-                        currentRole = role;
-                        currentUserEmail = email;
-                        closeLoginModal();
-                        applyRoleUI();
+                        currentRole = role; currentUserEmail = email;
+                        closeLoginModal(); applyRoleUI();
                         showToast('✅ Akaun berjaya didaftarkan! Selamat datang, ' + name);
                     });
                 })
                 .catch((error) => {
-                    console.error('Register error:', error);
                     let msg = '❌ Gagal daftar: ';
                     if (error.code === 'auth/email-already-in-use') msg += 'Emel sudah digunakan.';
                     else if (error.code === 'auth/invalid-email') msg += 'Emel tidak sah.';
-                    else if (error.code === 'auth/weak-password') msg += 'Kata laluan terlalu lemah (min 6 aksara).';
+                    else if (error.code === 'auth/weak-password') msg += 'Kata laluan lemah.';
                     else msg += error.message;
-                    errorEl.innerText = msg;
-                    errorEl.classList.remove('hidden');
+                    errorEl.innerText = msg; errorEl.classList.remove('hidden');
                 });
         }
 
-        // Tentukan role berdasarkan emel & Firestore, kemudian simpan ke RTDB
         function determineAndSetRole(user, email) {
             firestore.collection('users').doc(user.uid).get()
                 .then((doc) => {
                     let role = 'staff';
                     let displayName = user.displayName || email;
-
                     if (doc.exists) {
                         role = doc.data().role || 'staff';
                         displayName = doc.data().displayName || user.displayName || email;
                         if (email.toLowerCase() === BOSS_EMAIL.toLowerCase() && role !== 'boss') {
-                            role = 'boss';
-                            firestore.collection('users').doc(user.uid).update({ role: 'boss' });
+                            role = 'boss'; firestore.collection('users').doc(user.uid).update({ role: 'boss' });
                         }
                     } else {
-                        if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
-                            role = 'boss';
-                        } else {
-                            role = 'staff';
-                        }
-                        firestore.collection('users').doc(user.uid).set({
-                            role: role,
-                            displayName: displayName,
-                            email: email,
-                            createdAt: new Date().toISOString()
-                        });
+                        role = email.toLowerCase() === BOSS_EMAIL.toLowerCase() ? 'boss' : 'staff';
+                        firestore.collection('users').doc(user.uid).set({ role, displayName, email, createdAt: new Date().toISOString() });
                     }
-
-                    // Simpan ke Realtime Database
                     saveRoleToRTDB(user.uid, role, displayName, email);
-
                     sessionStorage.setItem('user_role', role);
                     sessionStorage.setItem('user_name', displayName);
                     sessionStorage.setItem('user_email', email);
-                    currentRole = role;
-                    currentUserEmail = email;
-                    closeLoginModal();
-                    applyRoleUI();
+                    currentRole = role; currentUserEmail = email;
+                    closeLoginModal(); applyRoleUI();
                     showToast('👋 Selamat Datang, ' + displayName);
                 })
                 .catch((err) => {
-                    console.error('Ralat baca Firestore:', err);
-                    let role = 'staff';
-                    if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) role = 'boss';
-                    // Fallback: simpan ke RTDB
+                    let role = email.toLowerCase() === BOSS_EMAIL.toLowerCase() ? 'boss' : 'staff';
                     saveRoleToRTDB(user.uid, role, user.displayName || email, email);
                     sessionStorage.setItem('user_role', role);
                     sessionStorage.setItem('user_name', user.displayName || email);
                     sessionStorage.setItem('user_email', email);
-                    currentRole = role;
-                    currentUserEmail = email;
-                    closeLoginModal();
-                    applyRoleUI();
+                    currentRole = role; currentUserEmail = email;
+                    closeLoginModal(); applyRoleUI();
                     showToast('👋 Selamat Datang, ' + (user.displayName || email));
                 });
         }
 
-        // Log keluar
         function handleLogout() {
             auth.signOut().then(() => {
                 sessionStorage.removeItem('user_role');
                 sessionStorage.removeItem('user_name');
                 sessionStorage.removeItem('user_email');
-                currentRole = null;
-                currentUserEmail = null;
+                currentRole = null; currentUserEmail = null;
                 showToast('👋 Anda telah log keluar.');
                 openLoginModal();
-            }).catch((error) => {
-                console.error('Logout error:', error);
-                showToast('❌ Gagal log keluar.');
-            });
+            }).catch(() => showToast('❌ Gagal log keluar.'));
         }
 
-        // ============================================================
-        // AUTO-LOGIN STATE (onAuthStateChanged)
-        // ============================================================
         auth.onAuthStateChanged((user) => {
             if (user) {
                 const email = user.email || '';
                 firestore.collection('users').doc(user.uid).get()
                     .then((doc) => {
-                        let role = 'staff';
-                        let displayName = user.displayName || email;
-
+                        let role = 'staff'; let displayName = user.displayName || email;
                         if (doc.exists) {
                             role = doc.data().role || 'staff';
                             displayName = doc.data().displayName || user.displayName || email;
                             if (email.toLowerCase() === BOSS_EMAIL.toLowerCase() && role !== 'boss') {
-                                role = 'boss';
-                                firestore.collection('users').doc(user.uid).update({ role: 'boss' });
+                                role = 'boss'; firestore.collection('users').doc(user.uid).update({ role: 'boss' });
                             }
                         } else {
-                            if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) {
-                                role = 'boss';
-                            } else {
-                                role = 'staff';
-                            }
-                            firestore.collection('users').doc(user.uid).set({
-                                role: role,
-                                displayName: displayName,
-                                email: email,
-                                createdAt: new Date().toISOString()
-                            });
+                            role = email.toLowerCase() === BOSS_EMAIL.toLowerCase() ? 'boss' : 'staff';
+                            firestore.collection('users').doc(user.uid).set({ role, displayName, email, createdAt: new Date().toISOString() });
                         }
-                        // Simpan ke Realtime Database
                         saveRoleToRTDB(user.uid, role, displayName, email);
-
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', displayName);
                         sessionStorage.setItem('user_email', email);
-                        currentRole = role;
-                        currentUserEmail = email;
-                        closeLoginModal();
-                        applyRoleUI();
+                        currentRole = role; currentUserEmail = email;
+                        closeLoginModal(); applyRoleUI();
                     })
-                    .catch((err) => {
-                        console.error('Ralat baca Firestore (onAuth):', err);
-                        let role = 'staff';
-                        if (email.toLowerCase() === BOSS_EMAIL.toLowerCase()) role = 'boss';
+                    .catch(() => {
+                        let role = email.toLowerCase() === BOSS_EMAIL.toLowerCase() ? 'boss' : 'staff';
                         saveRoleToRTDB(user.uid, role, user.displayName || email, email);
                         sessionStorage.setItem('user_role', role);
                         sessionStorage.setItem('user_name', user.displayName || email);
                         sessionStorage.setItem('user_email', email);
-                        currentRole = role;
-                        currentUserEmail = email;
-                        closeLoginModal();
-                        applyRoleUI();
+                        currentRole = role; currentUserEmail = email;
+                        closeLoginModal(); applyRoleUI();
                     });
             } else {
-                if (!sessionStorage.getItem('user_role')) {
-                    openLoginModal();
-                } else {
+                if (!sessionStorage.getItem('user_role')) openLoginModal();
+                else {
                     const storedRole = sessionStorage.getItem('user_role');
-                    if (storedRole) {
-                        currentRole = storedRole;
-                        applyRoleUI();
-                    } else {
-                        openLoginModal();
-                    }
+                    if (storedRole) { currentRole = storedRole; applyRoleUI(); }
+                    else openLoginModal();
                 }
             }
         });
 
-        // ============================================================
-        // APPLY ROLE UI
-        // ============================================================
         function applyRoleUI() {
             const userName = sessionStorage.getItem('user_name') || 'Pengguna';
             const roleBadge = document.getElementById('roleBadge');
@@ -957,107 +804,62 @@
             const bossBanner = document.getElementById('bossBanner');
             const stockTag = document.getElementById('stockAccessTag');
             const chatHeaderSub = document.getElementById('chatHeaderSub');
-
             if (currentRole === 'boss') {
                 roleBadge.innerHTML = `👑 ${userName}`;
                 roleBadge.className = "text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 shadow-2xs";
-
                 formsSection.classList.add('hidden');
                 bossBanner.classList.remove('hidden');
                 if (stockTag) stockTag.innerText = "Mod Boss (Semakan Sahaja)";
-                if (chatHeaderSub) chatHeaderSub.innerText = "Mod Boss: Hantar arahan atau maklum balas ke Staff";
-
+                if (chatHeaderSub) chatHeaderSub.innerText = "Mod Boss: Hantar arahan ke Staff";
                 document.querySelectorAll('.staff-only').forEach(el => el.classList.add('hidden'));
                 document.querySelectorAll('.col-action').forEach(el => el.style.display = 'none');
             } else {
                 roleBadge.innerHTML = `👤 ${userName}`;
                 roleBadge.className = "text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-2xs";
-
                 formsSection.classList.remove('hidden');
                 bossBanner.classList.add('hidden');
                 if (stockTag) stockTag.innerText = "Khas Untuk Staff";
                 if (chatHeaderSub) chatHeaderSub.innerText = "Mod Staff: Balas mesej & maklumkan status kedai";
-
                 document.querySelectorAll('.staff-only').forEach(el => el.classList.remove('hidden'));
                 document.querySelectorAll('.col-action').forEach(el => el.style.display = '');
             }
-
-            renderFinance();
-            renderStockTable();
-            initChatSystem();
+            renderFinance(); renderStockTable(); initChatSystem();
         }
 
-        // ============================================================
-        // MODAL CASH KEDAI
-        // ============================================================
         function openCashShopModal() {
-            if (currentRole === 'boss') {
-                showToast("⚠️ Mod Boss (Semakan Sahaja) - tiada akses edit.");
-                return;
-            }
+            if (currentRole === 'boss') { showToast("⚠️ Mod Boss (Semakan Sahaja)"); return; }
             const modal = document.getElementById('cashShopModal');
             const box = document.getElementById('cashShopModalBox');
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            modal.classList.add('opacity-100');
-            setTimeout(() => {
-                box.classList.remove('scale-90');
-                box.classList.add('scale-100');
-            }, 50);
+            modal.classList.remove('opacity-0', 'pointer-events-none'); modal.classList.add('opacity-100');
+            setTimeout(() => { box.classList.remove('scale-90'); box.classList.add('scale-100'); }, 50);
             document.body.style.overflow = 'hidden';
         }
-
         function closeCashShopModal() {
             const modal = document.getElementById('cashShopModal');
             const box = document.getElementById('cashShopModalBox');
-            box.classList.remove('scale-100');
-            box.classList.add('scale-90');
-            setTimeout(() => {
-                modal.classList.remove('opacity-100');
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                document.body.style.overflow = 'auto';
-            }, 200);
+            box.classList.remove('scale-100'); box.classList.add('scale-90');
+            setTimeout(() => { modal.classList.remove('opacity-100'); modal.classList.add('opacity-0', 'pointer-events-none'); document.body.style.overflow = 'auto'; }, 200);
         }
-        document.getElementById('cashShopModal').addEventListener('click', (e) => {
-            if (e.target.id === 'cashShopModal') closeCashShopModal();
-        });
+        document.getElementById('cashShopModal').addEventListener('click', (e) => { if (e.target.id === 'cashShopModal') closeCashShopModal(); });
 
-        // ============================================================
-        // SISTEM CHAT
-        // ============================================================
-        let isChatOpen = false;
-        let chatMessages = [];
-        let totalUnreadCount = 0;
-
+        let isChatOpen = false; let chatMessages = []; let totalUnreadCount = 0;
         function toggleChatModal() {
             const container = document.getElementById('chatDrawerContainer');
             const drawer = document.getElementById('chatDrawer');
             const backdrop = document.getElementById('chatBackdrop');
-
             isChatOpen = !isChatOpen;
-
             if (isChatOpen) {
                 container.classList.remove('pointer-events-none');
-                backdrop.classList.remove('opacity-0');
-                backdrop.classList.add('opacity-100');
-                drawer.classList.remove('translate-x-full');
-                drawer.classList.add('translate-x-0');
-                totalUnreadCount = 0;
-                updateUnreadBadges();
-                setTimeout(() => {
-                    const msgBox = document.getElementById('chatMessagesBox');
-                    msgBox.scrollTop = msgBox.scrollHeight;
-                }, 150);
+                backdrop.classList.remove('opacity-0'); backdrop.classList.add('opacity-100');
+                drawer.classList.remove('translate-x-full'); drawer.classList.add('translate-x-0');
+                totalUnreadCount = 0; updateUnreadBadges();
+                setTimeout(() => { const b = document.getElementById('chatMessagesBox'); b.scrollTop = b.scrollHeight; }, 150);
             } else {
-                drawer.classList.remove('translate-x-0');
-                drawer.classList.add('translate-x-full');
-                backdrop.classList.remove('opacity-100');
-                backdrop.classList.add('opacity-0');
-                setTimeout(() => {
-                    container.classList.add('pointer-events-none');
-                }, 300);
+                drawer.classList.remove('translate-x-0'); drawer.classList.add('translate-x-full');
+                backdrop.classList.remove('opacity-100'); backdrop.classList.add('opacity-0');
+                setTimeout(() => { container.classList.add('pointer-events-none'); }, 300);
             }
         }
-
         function initChatSystem() {
             db.ref('messages').limitToLast(50).on('value', (snapshot) => {
                 const data = snapshot.val();
@@ -1065,220 +867,91 @@
                 renderChatMessages();
             });
         }
-
         function handleSendMessage(e) {
             e.preventDefault();
-            if (!currentRole) {
-                showToast('⚠️ Sila log masuk dahulu.');
-                return;
-            }
+            if (!currentRole) { showToast('⚠️ Sila log masuk dahulu.'); return; }
             const input = document.getElementById('chatInput');
-            const text = input.value.trim();
-            if (!text) return;
-
+            const text = input.value.trim(); if (!text) return;
             const userName = sessionStorage.getItem('user_name') || (currentRole === 'boss' ? 'Boss' : 'Staff');
-            const msgObj = {
-                id: Date.now(),
-                senderRole: currentRole || 'staff',
-                senderName: userName,
-                text: text,
-                time: new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' }),
-                timestamp: Date.now()
-            };
-
-            db.ref('messages/' + msgObj.id).set(msgObj).then(() => {
-                input.value = '';
-            }).catch(err => {
-                console.error('Chat error:', err);
-                showToast('❌ Gagal hantar mesej');
-            });
+            const msgObj = { id: Date.now(), senderRole: currentRole || 'staff', senderName: userName, text, time: new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' }), timestamp: Date.now() };
+            db.ref('messages/' + msgObj.id).set(msgObj).then(() => { input.value = ''; }).catch(() => showToast('❌ Gagal hantar mesej'));
         }
-
-        function deleteChatMessage(id) {
-            if (confirm("Padam mesej ini?")) {
-                db.ref('messages/' + id).remove();
-            }
-        }
-
+        function deleteChatMessage(id) { if (confirm("Padam mesej ini?")) db.ref('messages/' + id).remove(); }
         function renderChatMessages() {
             const box = document.getElementById('chatMessagesBox');
             if (chatMessages.length === 0) {
-                box.innerHTML = `
-                    <div class="text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-2">
-                        <span class="text-3xl opacity-50">📬</span>
-                        <span>Tiada mesej lagi. Mula berhubung sekarang!</span>
-                    </div>
-                `;
+                box.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-2"><span class="text-3xl opacity-50">📬</span><span>Tiada mesej lagi. Mula berhubung sekarang!</span></div>`;
                 return;
             }
-
             box.innerHTML = '';
             chatMessages.forEach(msg => {
                 const isMe = (msg.senderRole === currentRole);
                 const isBossRole = (msg.senderRole === 'boss');
-
                 const alignClass = isMe ? 'justify-end' : 'justify-start';
-                const bubbleColor = isMe ?
-                    (isBossRole ? 'bg-amber-500 text-white rounded-br-none' :
-                        'bg-indigo-600 text-white rounded-br-none') :
-                    (isBossRole ? 'bg-amber-100 text-amber-950 border border-amber-200 rounded-bl-none' :
-                        'bg-white text-slate-800 border border-slate-200 rounded-bl-none');
-
-                const roleBadge = isBossRole ?
-                    '<span class="text-[9px] font-bold bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-md">👑 Boss</span>' :
-                    '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">👤 Staff</span>';
-
-                box.innerHTML += `
-                    <div class="flex ${alignClass} animate-pop-in">
-                        <div class="max-w-[85%] space-y-1">
-                            <div class="flex items-center gap-1.5 text-[10px] text-slate-400 ${isMe ? 'justify-end' : 'justify-start'}">
-                                ${roleBadge}
-                                <span class="font-semibold text-slate-600">${msg.senderName || ''}</span>
-                                <span>• ${msg.time || ''}</span>
-                            </div>
-                            <div class="p-3 rounded-2xl text-xs shadow-xs leading-relaxed ${bubbleColor} relative group">
-                                ${msg.text}
-                                ${isMe ? `<button onclick="deleteChatMessage(${msg.id})" class="opacity-0 group-hover:opacity-100 text-[10px] text-rose-200 hover:text-white ml-2 transition-opacity">✕</button>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                const bubbleColor = isMe ? (isBossRole ? 'bg-amber-500 text-white rounded-br-none' : 'bg-indigo-600 text-white rounded-br-none') : (isBossRole ? 'bg-amber-100 text-amber-950 border border-amber-200 rounded-bl-none' : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none');
+                const roleBadge = isBossRole ? '<span class="text-[9px] font-bold bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-md">👑 Boss</span>' : '<span class="text-[9px] font-bold bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">👤 Staff</span>';
+                box.innerHTML += `<div class="flex ${alignClass} animate-pop-in"><div class="max-w-[85%] space-y-1"><div class="flex items-center gap-1.5 text-[10px] text-slate-400 ${isMe ? 'justify-end' : 'justify-start'}">${roleBadge}<span class="font-semibold text-slate-600">${msg.senderName || ''}</span><span>• ${msg.time || ''}</span></div><div class="p-3 rounded-2xl text-xs shadow-xs leading-relaxed ${bubbleColor} relative group">${msg.text}${isMe ? `<button onclick="deleteChatMessage(${msg.id})" class="opacity-0 group-hover:opacity-100 text-[10px] text-rose-200 hover:text-white ml-2 transition-opacity">✕</button>` : ''}</div></div></div>`;
             });
-
             box.scrollTop = box.scrollHeight;
-
-            if (!isChatOpen) {
-                totalUnreadCount++;
-                updateUnreadBadges();
-            }
+            if (!isChatOpen) { totalUnreadCount++; updateUnreadBadges(); }
         }
-
         function updateUnreadBadges() {
             const badgeNav = document.getElementById('unreadBadgeNav');
             const badgeFloating = document.getElementById('unreadBadgeFloating');
-
             if (totalUnreadCount > 0) {
-                badgeNav.innerText = totalUnreadCount;
-                badgeNav.classList.remove('hidden');
-                badgeFloating.innerText = totalUnreadCount;
-                badgeFloating.classList.remove('hidden');
-            } else {
-                badgeNav.classList.add('hidden');
-                badgeFloating.classList.add('hidden');
-            }
+                badgeNav.innerText = totalUnreadCount; badgeNav.classList.remove('hidden');
+                badgeFloating.innerText = totalUnreadCount; badgeFloating.classList.remove('hidden');
+            } else { badgeNav.classList.add('hidden'); badgeFloating.classList.add('hidden'); }
         }
 
-        // ============================================================
-        // MODAL STOCKTAKE
-        // ============================================================
         function openStockModal() {
-            const modal = document.getElementById('stockModal');
-            const box = document.getElementById('stockModalBox');
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            modal.classList.add('opacity-100');
-            setTimeout(() => {
-                box.classList.remove('scale-90');
-                box.classList.add('scale-100');
-            }, 50);
+            const modal = document.getElementById('stockModal'); const box = document.getElementById('stockModalBox');
+            modal.classList.remove('opacity-0', 'pointer-events-none'); modal.classList.add('opacity-100');
+            setTimeout(() => { box.classList.remove('scale-90'); box.classList.add('scale-100'); }, 50);
             document.body.style.overflow = 'hidden';
         }
-
         function closeStockModal() {
-            const modal = document.getElementById('stockModal');
-            const box = document.getElementById('stockModalBox');
-            box.classList.remove('scale-100');
-            box.classList.add('scale-90');
-            setTimeout(() => {
-                modal.classList.remove('opacity-100');
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                document.body.style.overflow = 'auto';
-            }, 200);
+            const modal = document.getElementById('stockModal'); const box = document.getElementById('stockModalBox');
+            box.classList.remove('scale-100'); box.classList.add('scale-90');
+            setTimeout(() => { modal.classList.remove('opacity-100'); modal.classList.add('opacity-0', 'pointer-events-none'); document.body.style.overflow = 'auto'; }, 200);
         }
-
         function clearStockSearch() {
             const searchInput = document.getElementById('stockSearchInput');
-            if (searchInput) {
-                searchInput.value = '';
-                renderStockTable();
-                searchInput.focus();
-            }
+            if (searchInput) { searchInput.value = ''; renderStockTable(); searchInput.focus(); }
         }
-        document.getElementById('stockModal').addEventListener('click', (e) => {
-            if (e.target.id === 'stockModal') closeStockModal();
-        });
+        document.getElementById('stockModal').addEventListener('click', (e) => { if (e.target.id === 'stockModal') closeStockModal(); });
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeStockModal();
-                closeCashShopModal();
-                if (isChatOpen) toggleChatModal();
-            }
+            if (e.key === 'Escape') { closeStockModal(); closeCashShopModal(); if (isChatOpen) toggleChatModal(); }
         });
 
-        // ============================================================
-        // KEWANGAN & CASH KEDAI
-        // ============================================================
-        let sales = [];
-        let expenses = [];
-        let cashInShop = [];
+        let sales = []; let expenses = []; let cashInShop = [];
         const today = new Date();
-
         document.getElementById('saleDate').valueAsDate = today;
         document.getElementById('expDate').valueAsDate = today;
         document.getElementById('cashShopDateModal').valueAsDate = today;
         document.getElementById('stockDate').valueAsDate = today;
         document.getElementById('filterMonth').value = today.toISOString().slice(0, 7);
 
-        db.ref('sales').on('value', (snapshot) => {
-            const data = snapshot.val();
-            sales = data ? Object.values(data) : [];
-            renderFinance();
-        });
+        db.ref('sales').on('value', (s) => { const d = s.val(); sales = d ? Object.values(d) : []; renderFinance(); });
+        db.ref('expenses').on('value', (s) => { const d = s.val(); expenses = d ? Object.values(d) : []; renderFinance(); });
+        db.ref('cashInShop').on('value', (s) => { const d = s.val(); cashInShop = d ? Object.values(d) : []; renderFinance(); });
 
-        db.ref('expenses').on('value', (snapshot) => {
-            const data = snapshot.val();
-            expenses = data ? Object.values(data) : [];
-            renderFinance();
-        });
-
-        db.ref('cashInShop').on('value', (snapshot) => {
-            const data = snapshot.val();
-            cashInShop = data ? Object.values(data) : [];
-            renderFinance();
-        });
-
-        // ============================================================
-        // STOCKTAKE: BAKI BERTERUSAN
-        // ============================================================
         window.defaultCategories = {
-            "🥛 Susu Farm Fresh": [
-                { name: "Susu Farm Fresh Barista", unit: "pcs", target: 5 }
-            ],
+            "🥛 Susu Farm Fresh": [{ name: "Susu Farm Fresh Barista", unit: "pcs", target: 5 }],
             "🥤 Syrup & Sos": [
-                { name: "Syrup Vanilla", unit: "botol", target: 5 },
-                { name: "Syrup Salted Caramel", unit: "botol", target: 5 },
-                { name: "Syrup Hazelnut", unit: "botol", target: 5 },
-                { name: "Syrup Butterscotch", unit: "botol", target: 5 },
-                { name: "Syrup Tiramisu", unit: "botol", target: 5 },
-                { name: "Syrup Creme Brulee", unit: "botol", target: 5 },
-                { name: "Syrup Toffee Nut", unit: "botol", target: 5 },
-                { name: "Syrup Raspberry", unit: "botol", target: 5 },
-                { name: "Syrup Peach", unit: "botol", target: 5 },
-                { name: "Syrup Lemon", unit: "botol", target: 5 },
-                { name: "Monin Strawberry Sauce", unit: "botol", target: 5 },
-                { name: "Mixed Berry Sauce", unit: "botol", target: 5 },
-                { name: "Chocolate Sauce", unit: "botol", target: 5 },
-                { name: "Caramel Sauce", unit: "botol", target: 5 },
+                { name: "Syrup Vanilla", unit: "botol", target: 5 }, { name: "Syrup Salted Caramel", unit: "botol", target: 5 },
+                { name: "Syrup Hazelnut", unit: "botol", target: 5 }, { name: "Syrup Butterscotch", unit: "botol", target: 5 },
+                { name: "Syrup Tiramisu", unit: "botol", target: 5 }, { name: "Syrup Creme Brulee", unit: "botol", target: 5 },
+                { name: "Syrup Toffee Nut", unit: "botol", target: 5 }, { name: "Syrup Raspberry", unit: "botol", target: 5 },
+                { name: "Syrup Peach", unit: "botol", target: 5 }, { name: "Syrup Lemon", unit: "botol", target: 5 },
+                { name: "Monin Strawberry Sauce", unit: "botol", target: 5 }, { name: "Mixed Berry Sauce", unit: "botol", target: 5 },
+                { name: "Chocolate Sauce", unit: "botol", target: 5 }, { name: "Caramel Sauce", unit: "botol", target: 5 },
                 { name: "Passion Fruit Sauce", unit: "botol", target: 5 }
             ],
-            "🍫 Powder & Biji Kopi": [
-                { name: "Coffee Beans", unit: "peket", target: 5 },
-                { name: "Matcha Powder", unit: "peket", target: 5 }
-            ],
+            "🍫 Powder & Biji Kopi": [{ name: "Coffee Beans", unit: "peket", target: 5 }, { name: "Matcha Powder", unit: "peket", target: 5 }],
             "🥤 Cawan & Packaging": [
-                { name: "Cawan 16 oz", unit: "pcs", target: 50 },
-                { name: "Cawan 12 oz", unit: "pcs", target: 50 },
-                { name: "Cup Panas", unit: "pcs", target: 30 },
-                { name: "Straw Kecik", unit: "pcs", target: 100 },
+                { name: "Cawan 16 oz", unit: "pcs", target: 50 }, { name: "Cawan 12 oz", unit: "pcs", target: 50 },
+                { name: "Cup Panas", unit: "pcs", target: 30 }, { name: "Straw Kecik", unit: "pcs", target: 100 },
                 { name: "Straw Besar", unit: "pcs", target: 100 }
             ]
         };
@@ -1288,52 +961,29 @@
 
         db.ref('inventoryCatalog').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data) {
-                window.stockCategories = normalizeCategories(data);
-            } else {
-                window.stockCategories = JSON.parse(JSON.stringify(window.defaultCategories));
-                if (currentRole === 'staff') {
-                    saveCatalogToFirebase();
-                }
-            }
+            if (data) window.stockCategories = normalizeCategories(data);
+            else { window.stockCategories = JSON.parse(JSON.stringify(window.defaultCategories)); if (currentRole === 'staff') saveCatalogToFirebase(); }
             renderStockTable();
         });
 
         function initMasterStockListener() {
             const cloudStatus = document.getElementById('cloudStatus');
             const triggerStatus = document.getElementById('triggerCloudStatus');
-
-            if (cloudStatus) {
-                cloudStatus.innerText = '🔄 Menyegerak...';
-                cloudStatus.className = 'text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-full';
-            }
+            if (cloudStatus) { cloudStatus.innerText = '🔄 Menyegerak...'; cloudStatus.className = 'text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-full'; }
             if (triggerStatus) triggerStatus.innerText = '🔄 Menyegerak...';
-
             db.ref('inventoryStock').on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    window.stockData = data;
-                } else {
+                if (data) window.stockData = data;
+                else {
                     window.stockData = {};
-                    Object.values(window.stockCategories).flat().forEach(itemObj => {
-                        window.stockData[itemObj.name] = 5;
-                    });
-                    if (currentRole === 'staff') {
-                        saveMasterStockToFirebase();
-                    }
+                    Object.values(window.stockCategories).flat().forEach(itemObj => { window.stockData[itemObj.name] = 5; });
+                    if (currentRole === 'staff') saveMasterStockToFirebase();
                 }
-                if (cloudStatus) {
-                    cloudStatus.innerText = '☁️ Tersimpan ke Firebase';
-                    cloudStatus.className = 'text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full';
-                }
+                if (cloudStatus) { cloudStatus.innerText = '☁️ Tersimpan ke Firebase'; cloudStatus.className = 'text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full'; }
                 if (triggerStatus) triggerStatus.innerText = '☁️ Tersimpan ke Firebase';
                 renderStockTable();
             }, (error) => {
-                console.error('Master stock listener error:', error);
-                if (cloudStatus) {
-                    cloudStatus.innerText = '❌ Gagal sambung';
-                    cloudStatus.className = 'text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full';
-                }
+                if (cloudStatus) { cloudStatus.innerText = '❌ Gagal sambung'; cloudStatus.className = 'text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full'; }
                 if (triggerStatus) triggerStatus.innerText = '❌ Gagal';
             });
         }
@@ -1346,60 +996,36 @@
                         let unit = catName.includes('Packaging') ? 'pcs' : 'botol';
                         if (item.includes('Beans') || item.includes('Powder')) unit = 'peket';
                         if (item.includes('Farm Fresh') || catName.includes('Susu')) unit = 'pcs';
-                        return { name: item, unit: unit, target: 5 };
+                        return { name: item, unit, target: 5 };
                     }
                     let targetVal = parseInt(item.target) || 5;
                     targetVal = Math.min(2000, Math.max(1, targetVal));
-                    return {
-                        name: item.name,
-                        unit: item.unit || 'pcs',
-                        target: targetVal
-                    };
+                    return { name: item.name, unit: item.unit || 'pcs', target: targetVal };
                 });
             });
             return normalized;
         }
 
-        function saveCatalogToFirebase() {
-            if (currentRole !== 'staff') return;
-            db.ref('inventoryCatalog').set(window.stockCategories).catch(err => console.error('Save catalog error:', err));
-        }
-
+        function saveCatalogToFirebase() { if (currentRole !== 'staff') return; db.ref('inventoryCatalog').set(window.stockCategories).catch(err => console.error(err)); }
         function saveMasterStockToFirebase() {
             if (currentRole !== 'staff') return;
-            db.ref('inventoryStock').set(window.stockData).catch(err => console.error('Save master stock error:', err));
+            db.ref('inventoryStock').set(window.stockData).catch(err => console.error(err));
             const dateStr = document.getElementById('stockDate').value;
-            if (dateStr) {
-                db.ref('stocktake/' + dateStr).set({
-                    stockData: window.stockData,
-                    updatedAt: new Date().toISOString()
-                }).catch(err => console.error('Save snapshot error:', err));
-            }
+            if (dateStr) db.ref('stocktake/' + dateStr).set({ stockData: window.stockData, updatedAt: new Date().toISOString() }).catch(err => console.error(err));
         }
 
-        // ============================================================
-        // FUNGSI UBAH KEDUDUKAN ITEM
-        // ============================================================
         function moveItemUp(category, index) {
-            if (currentRole !== 'staff') return;
-            if (index <= 0) return;
+            if (currentRole !== 'staff' || index <= 0) return;
             const list = window.stockCategories[category];
-            const temp = list[index];
-            list[index] = list[index - 1];
-            list[index - 1] = temp;
-            saveCatalogToFirebase();
-            renderStockTable();
+            const temp = list[index]; list[index] = list[index - 1]; list[index - 1] = temp;
+            saveCatalogToFirebase(); renderStockTable();
         }
-
         function moveItemDown(category, index) {
             if (currentRole !== 'staff') return;
             const list = window.stockCategories[category];
             if (index >= list.length - 1) return;
-            const temp = list[index];
-            list[index] = list[index + 1];
-            list[index + 1] = temp;
-            saveCatalogToFirebase();
-            renderStockTable();
+            const temp = list[index]; list[index] = list[index + 1]; list[index + 1] = temp;
+            saveCatalogToFirebase(); renderStockTable();
         }
 
         function addNewSyrupItem() {
@@ -1408,194 +1034,92 @@
             const name = document.getElementById('newSyrupName').value.trim();
             const unit = document.getElementById('newSyrupUnit').value;
             const target = parseInt(document.getElementById('newSyrupTarget').value) || 5;
-
-            if (!name) {
-                showToast("⚠️ Sila masukkan nama item!");
-                return;
-            }
-            if (!window.stockCategories[category]) {
-                window.stockCategories[category] = [];
-            }
+            if (!name) { showToast("⚠️ Sila masukkan nama item!"); return; }
+            if (!window.stockCategories[category]) window.stockCategories[category] = [];
             const exists = window.stockCategories[category].some(i => i.name.toLowerCase() === name.toLowerCase());
-            if (exists) {
-                showToast("⚠️ Item ini sudah wujud!");
-                return;
-            }
+            if (exists) { showToast("⚠️ Item ini sudah wujud!"); return; }
             window.stockCategories[category].push({ name, unit, target });
             window.stockData[name] = target;
-            saveCatalogToFirebase();
-            saveMasterStockToFirebase();
-            renderStockTable();
+            saveCatalogToFirebase(); saveMasterStockToFirebase(); renderStockTable();
             document.getElementById('newSyrupName').value = '';
             showToast(`Item "${name}" berjaya ditambah!`);
         }
 
         function renderStockTable() {
-            const tbody = document.getElementById('syrupTableBody');
-            if (!tbody) return;
+            const tbody = document.getElementById('syrupTableBody'); if (!tbody) return;
             tbody.innerHTML = '';
             const isBoss = (currentRole === 'boss');
             const searchQuery = (document.getElementById('stockSearchInput')?.value || '').toLowerCase().trim();
-
-            document.querySelectorAll('.col-action').forEach(col => {
-                col.style.display = isBoss ? 'none' : '';
-            });
-
+            document.querySelectorAll('.col-action').forEach(col => { col.style.display = isBoss ? 'none' : ''; });
             const categories = window.stockCategories || window.defaultCategories;
             let totalMatchesFound = 0;
-
             Object.keys(categories).forEach((catName) => {
                 const rawItems = categories[catName] || [];
                 const itemsWithIndex = rawItems.map((itemObj, index) => ({ itemObj, index }));
-                const filteredItems = itemsWithIndex.filter(({ itemObj }) =>
-                    itemObj.name.toLowerCase().includes(searchQuery) || catName.toLowerCase().includes(searchQuery)
-                );
-
+                const filteredItems = itemsWithIndex.filter(({ itemObj }) => itemObj.name.toLowerCase().includes(searchQuery) || catName.toLowerCase().includes(searchQuery));
                 if (filteredItems.length === 0) return;
                 totalMatchesFound += filteredItems.length;
-
                 const catHeaderTr = document.createElement('tr');
                 catHeaderTr.className = "bg-slate-100/90 font-bold text-slate-800 text-xs tracking-wide uppercase border-y border-slate-200";
-                catHeaderTr.innerHTML = `
-                    <td colspan="${isBoss ? '4' : '5'}" class="py-2.5 px-4 bg-slate-200/50 text-slate-900 font-bold">
-                        ${catName} (${filteredItems.length} item)
-                    </td>
-                `;
+                catHeaderTr.innerHTML = `<td colspan="${isBoss ? '4' : '5'}" class="py-2.5 px-4 bg-slate-200/50 text-slate-900 font-bold">${catName} (${filteredItems.length} item)</td>`;
                 tbody.appendChild(catHeaderTr);
-
                 filteredItems.forEach(({ itemObj, index }) => {
-                    const itemName = itemObj.name;
-                    const itemUnit = itemObj.unit || 'pcs';
+                    const itemName = itemObj.name; const itemUnit = itemObj.unit || 'pcs';
                     const itemTarget = itemObj.target !== undefined ? itemObj.target : 5;
                     const currentQty = window.stockData[itemName] !== undefined ? window.stockData[itemName] : 5;
-
-                    let statusClass = 'status-full';
-                    let statusText = 'Mencukupi';
-                    if (currentQty === 0) {
-                        statusClass = 'status-danger';
-                        statusText = 'Habis';
-                    } else if (currentQty < itemTarget) {
-                        statusClass = 'status-warning';
-                        statusText = 'Rendah';
-                    }
-
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50/80 transition-colors";
-
-                    const isFirst = (index === 0);
-                    const isLast = (index === rawItems.length - 1);
-
-                    const actionTd = isBoss ? '' : `
-                        <td class="py-2.5 px-4 text-center col-action">
-                            <div class="flex items-center justify-center gap-1">
-                                <button onclick="moveItemUp('${catName}', ${index})" ${isFirst ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Naikkan">⬆️</button>
-                                <button onclick="moveItemDown('${catName}', ${index})" ${isLast ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Turunkan">⬇️</button>
-                                <button class="btn-delete-syrup text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-100 font-medium transition-colors ml-1" data-syrup="${itemName}" data-cat="${catName}">Padam</button>
-                            </div>
-                        </td>
-                    `;
-
-                    const qtyControls = isBoss ? `
-                        <span class="font-bold text-slate-800 text-base px-2">${currentQty} ${itemUnit}</span>
-                    ` : `
-                        <div class="flex items-center gap-1">
-                            <button class="qty-btn btn-minus" data-syrup="${itemName}">-</button>
-                            <input type="number" class="qty-input stock-qty" data-syrup="${itemName}" value="${currentQty}" min="0" max="2000">
-                            <button class="qty-btn btn-plus" data-syrup="${itemName}">+</button>
-                            <span class="text-xs text-slate-500 font-medium ml-1">${itemUnit}</span>
-                        </div>
-                    `;
-
-                    const targetControls = isBoss ? `
-                        <span class="font-bold text-blue-700 text-sm">${itemTarget} ${itemUnit}</span>
-                    ` : `
-                        <div class="flex items-center gap-1">
-                            <input type="number" class="qty-input target-qty" data-syrup="${itemName}" data-cat="${catName}" value="${itemTarget}" min="1" max="2000">
-                            <span class="text-xs text-slate-500 font-medium">${itemUnit}</span>
-                        </div>
-                    `;
-
-                    tr.innerHTML = `
-                        <td class="py-2.5 px-4 pl-6"><div class="font-medium text-slate-800">${itemName}</div></td>
-                        <td class="py-2.5 px-4">${qtyControls}</td>
-                        <td class="py-2.5 px-4">${targetControls}</td>
-                        <td class="py-2.5 px-4"><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        ${actionTd}
-                    `;
+                    let statusClass = 'status-full'; let statusText = 'Mencukupi';
+                    if (currentQty === 0) { statusClass = 'status-danger'; statusText = 'Habis'; }
+                    else if (currentQty < itemTarget) { statusClass = 'status-warning'; statusText = 'Rendah'; }
+                    const tr = document.createElement('tr'); tr.className = "hover:bg-slate-50/80 transition-colors";
+                    const isFirst = (index === 0); const isLast = (index === rawItems.length - 1);
+                    const actionTd = isBoss ? '' : `<td class="py-2.5 px-4 text-center col-action"><div class="flex items-center justify-center gap-1"><button onclick="moveItemUp('${catName}', ${index})" ${isFirst ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Naikkan">⬆️</button><button onclick="moveItemDown('${catName}', ${index})" ${isLast ? 'disabled class="opacity-30 cursor-not-allowed text-xs p-1 bg-slate-100 rounded"' : 'class="text-xs p-1 bg-slate-100 hover:bg-slate-200 rounded font-bold transition-all active:scale-90"'} title="Turunkan">⬇️</button><button class="btn-delete-syrup text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-100 font-medium transition-colors ml-1" data-syrup="${itemName}" data-cat="${catName}">Padam</button></div></td>`;
+                    const qtyControls = isBoss ? `<span class="font-bold text-slate-800 text-base px-2">${currentQty} ${itemUnit}</span>` : `<div class="flex items-center gap-1"><button class="qty-btn btn-minus" data-syrup="${itemName}">-</button><input type="number" class="qty-input stock-qty" data-syrup="${itemName}" value="${currentQty}" min="0" max="2000"><button class="qty-btn btn-plus" data-syrup="${itemName}">+</button><span class="text-xs text-slate-500 font-medium ml-1">${itemUnit}</span></div>`;
+                    const targetControls = isBoss ? `<span class="font-bold text-blue-700 text-sm">${itemTarget} ${itemUnit}</span>` : `<div class="flex items-center gap-1"><input type="number" class="qty-input target-qty" data-syrup="${itemName}" data-cat="${catName}" value="${itemTarget}" min="1" max="2000"><span class="text-xs text-slate-500 font-medium">${itemUnit}</span></div>`;
+                    tr.innerHTML = `<td class="py-2.5 px-4 pl-6"><div class="font-medium text-slate-800">${itemName}</div></td><td class="py-2.5 px-4">${qtyControls}</td><td class="py-2.5 px-4">${targetControls}</td><td class="py-2.5 px-4"><span class="status-badge ${statusClass}">${statusText}</span></td>${actionTd}`;
                     tbody.appendChild(tr);
                 });
             });
-
             if (totalMatchesFound === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="${isBoss ? '4' : '5'}" class="py-8 text-center text-slate-400 text-xs font-medium">
-                            🔍 Tiada item stok ditemui mengikut carian "${searchQuery}".
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = `<tr><td colspan="${isBoss ? '4' : '5'}" class="py-8 text-center text-slate-400 text-xs font-medium">🔍 Tiada item stok ditemui mengikut carian "${searchQuery}".</td></tr>`;
             }
-
             if (!isBoss) {
                 document.querySelectorAll('.btn-minus').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const name = e.target.dataset.syrup;
                         const input = document.querySelector(`.stock-qty[data-syrup="${name}"]`);
-                        if (input) {
-                            let val = parseInt(input.value) || 0;
-                            if (val > 0) val--;
-                            input.value = val;
-                            updateStockQty(name, val);
-                        }
+                        if (input) { let val = parseInt(input.value) || 0; if (val > 0) val--; input.value = val; updateStockQty(name, val); }
                     });
                 });
                 document.querySelectorAll('.btn-plus').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const name = e.target.dataset.syrup;
                         const input = document.querySelector(`.stock-qty[data-syrup="${name}"]`);
-                        if (input) {
-                            let val = parseInt(input.value) || 0;
-                            if (val < 2000) val++;
-                            input.value = val;
-                            updateStockQty(name, val);
-                        }
+                        if (input) { let val = parseInt(input.value) || 0; if (val < 2000) val++; input.value = val; updateStockQty(name, val); }
                     });
                 });
                 document.querySelectorAll('.stock-qty').forEach(input => {
                     input.addEventListener('change', (e) => {
                         const name = e.target.dataset.syrup;
                         let val = parseInt(e.target.value) || 0;
-                        if (val < 0) val = 0;
-                        if (val > 2000) val = 2000;
-                        e.target.value = val;
-                        updateStockQty(name, val);
+                        if (val < 0) val = 0; if (val > 2000) val = 2000;
+                        e.target.value = val; updateStockQty(name, val);
                     });
                 });
                 document.querySelectorAll('.target-qty').forEach(input => {
                     input.addEventListener('change', (e) => {
-                        const name = e.target.dataset.syrup;
-                        const cat = e.target.dataset.cat;
+                        const name = e.target.dataset.syrup; const cat = e.target.dataset.cat;
                         let val = parseInt(e.target.value) || 5;
-                        if (val < 1) val = 1;
-                        if (val > 2000) val = 2000;
-                        e.target.value = val;
-                        updateTargetQty(cat, name, val);
+                        if (val < 1) val = 1; if (val > 2000) val = 2000;
+                        e.target.value = val; updateTargetQty(cat, name, val);
                     });
                 });
                 document.querySelectorAll('.btn-delete-syrup').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        const name = e.target.dataset.syrup;
-                        const cat = e.target.dataset.cat;
-                        if (confirm(`Padam "${name}" secara kekal daripada senarai item?`)) {
+                        const name = e.target.dataset.syrup; const cat = e.target.dataset.cat;
+                        if (confirm(`Padam "${name}" secara kekal?`)) {
                             if (window.stockCategories[cat]) {
                                 const idx = window.stockCategories[cat].findIndex(i => i.name === name);
-                                if (idx > -1) {
-                                    window.stockCategories[cat].splice(idx, 1);
-                                    delete window.stockData[name];
-                                    saveCatalogToFirebase();
-                                    saveMasterStockToFirebase();
-                                    renderStockTable();
-                                }
+                                if (idx > -1) { window.stockCategories[cat].splice(idx, 1); delete window.stockData[name]; saveCatalogToFirebase(); saveMasterStockToFirebase(); renderStockTable(); }
                             }
                         }
                     });
@@ -1605,29 +1129,18 @@
 
         function updateStockQty(syrup, newQty) {
             if (currentRole !== 'staff') return;
-            if (newQty < 0) newQty = 0;
-            if (newQty > 2000) newQty = 2000;
+            if (newQty < 0) newQty = 0; if (newQty > 2000) newQty = 2000;
             window.stockData[syrup] = newQty;
-            saveMasterStockToFirebase();
-            renderStockTable();
+            saveMasterStockToFirebase(); renderStockTable();
         }
-
         function updateTargetQty(category, itemName, newTarget) {
             if (currentRole !== 'staff') return;
             if (window.stockCategories[category]) {
                 const itemObj = window.stockCategories[category].find(i => i.name === itemName);
-                if (itemObj) {
-                    itemObj.target = newTarget;
-                    saveCatalogToFirebase();
-                    renderStockTable();
-                    showToast(`Limit stok "${itemName}" ditukar ke ${newTarget}`);
-                }
+                if (itemObj) { itemObj.target = newTarget; saveCatalogToFirebase(); renderStockTable(); showToast(`Limit stok "${itemName}" ditukar ke ${newTarget}`); }
             }
         }
 
-        // ============================================================
-        // FUNGSI KEWANGAN
-        // ============================================================
         function addSales(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1636,11 +1149,9 @@
             const amount = parseFloat(document.getElementById('saleAmount').value);
             const id = Date.now();
             db.ref('sales/' + id).set({ id, date, desc, amount });
-            document.getElementById('salesForm').reset();
-            document.getElementById('saleDate').valueAsDate = new Date();
+            document.getElementById('salesForm').reset(); document.getElementById('saleDate').valueAsDate = new Date();
             showToast("Total Sale Harian Berjaya Disimpan!");
         }
-
         function addExpense(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1651,11 +1162,9 @@
             const amount = parseFloat(document.getElementById('expAmount').value);
             const id = Date.now();
             db.ref('expenses/' + id).set({ id, date, method, category, desc, amount });
-            document.getElementById('expenseForm').reset();
-            document.getElementById('expDate').valueAsDate = new Date();
+            document.getElementById('expenseForm').reset(); document.getElementById('expDate').valueAsDate = new Date();
             showToast("Perbelanjaan Berjaya Disimpan!");
         }
-
         function addCashInShop(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1665,81 +1174,37 @@
             const amount = parseFloat(document.getElementById('cashShopAmountModal').value);
             const id = Date.now();
             db.ref('cashInShop/' + id).set({ id, date, type, desc, amount });
-            document.getElementById('cashShopFormModal').reset();
-            document.getElementById('cashShopDateModal').valueAsDate = new Date();
-            closeCashShopModal();
-            showToast("Rekod Cash Kedai Disimpan!");
+            document.getElementById('cashShopFormModal').reset(); document.getElementById('cashShopDateModal').valueAsDate = new Date();
+            closeCashShopModal(); showToast("Rekod Cash Kedai Disimpan!");
         }
-
-        function deleteSale(id) {
-            if (currentRole !== 'staff') return;
-            if (confirm("Padam rekod jualan ini?")) db.ref('sales/' + id).remove();
-        }
-
-        function deleteExpense(id) {
-            if (currentRole !== 'staff') return;
-            if (confirm("Padam rekod perbelanjaan ini?")) db.ref('expenses/' + id).remove();
-        }
-
-        function deleteCashInShop(id) {
-            if (currentRole !== 'staff') return;
-            if (confirm("Padam rekod cash kedai ini?")) db.ref('cashInShop/' + id).remove();
-        }
+        function deleteSale(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod jualan ini?")) db.ref('sales/' + id).remove(); }
+        function deleteExpense(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod perbelanjaan ini?")) db.ref('expenses/' + id).remove(); }
+        function deleteCashInShop(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod cash kedai ini?")) db.ref('cashInShop/' + id).remove(); }
 
         function renderFinance() {
             const selectedMonth = document.getElementById('filterMonth').value;
-
-            let totalSalesMonth = 0;
-            let expCashTotal = 0,
-                expQRTotal = 0,
-                expTnGTot = 0;
-            let catSewaTotal = 0,
-                catElektrikTotal = 0,
-                catAirTotal = 0,
-                catGajiTotal = 0,
-                catAisTotal = 0,
-                catLainTotal = 0;
+            let totalSalesMonth = 0; let expCashTotal = 0, expQRTotal = 0, expTnGTot = 0;
+            let catSewaTotal = 0, catElektrikTotal = 0, catAirTotal = 0, catGajiTotal = 0, catAisTotal = 0, catLainTotal = 0;
             let totalCashShopMonth = 0;
-
             const isBoss = (currentRole === 'boss');
 
-            // Sales
-            const salesBody = document.getElementById('salesTableBody');
-            salesBody.innerHTML = '';
+            const salesBody = document.getElementById('salesTableBody'); salesBody.innerHTML = '';
             const filteredSales = sales.sort((a, b) => new Date(b.date) - new Date(a.date));
             document.getElementById('salesCount').innerText = `${filteredSales.length} rekod`;
-
             filteredSales.forEach(item => {
-                if (item.date && item.date.startsWith(selectedMonth)) {
-                    totalSalesMonth += item.amount;
-                }
-                const deleteBtn = isBoss ? '' :
-                    `<button onclick="deleteSale(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                salesBody.innerHTML += `
-                    <tr class="hover:bg-slate-50/80">
-                        <td class="py-2.5 px-2">
-                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mb-0.5">💰 Jualan</span>
-                            <div class="text-[11px] text-slate-400">${item.date}</div>
-                        </td>
-                        <td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td>
-                        <td class="py-2.5 px-2 text-right font-semibold text-emerald-600">+${item.amount.toFixed(2)}</td>
-                        <td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td>
-                    </tr>
-                `;
+                if (item.date && item.date.startsWith(selectedMonth)) totalSalesMonth += item.amount;
+                const deleteBtn = isBoss ? '' : `<button onclick="deleteSale(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+                salesBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mb-0.5">💰 Jualan</span><div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right font-semibold text-emerald-600">+${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
             });
 
-            // Expenses
-            const expenseBody = document.getElementById('expenseTableBody');
-            expenseBody.innerHTML = '';
+            const expenseBody = document.getElementById('expenseTableBody'); expenseBody.innerHTML = '';
             const filteredExpenses = expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
             document.getElementById('expCount').innerText = `${filteredExpenses.length} rekod`;
-
             filteredExpenses.forEach(item => {
                 if (item.date && item.date.startsWith(selectedMonth)) {
                     if (item.method === 'Cash') expCashTotal += item.amount;
                     else if (item.method === 'QR') expQRTotal += item.amount;
                     else if (item.method === 'Touch n Go') expTnGTot += item.amount;
-
                     if (item.category === 'Sewa Kedai') catSewaTotal += item.amount;
                     else if (item.category === 'Bil Elektrik') catElektrikTotal += item.amount;
                     else if (item.category === 'Bil Air') catAirTotal += item.amount;
@@ -1751,63 +1216,34 @@
                 if (item.method === 'Cash') badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
                 else if (item.method === 'QR') badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
                 else if (item.method === 'Touch n Go') badgeColor = 'bg-sky-50 text-sky-700 border border-sky-200';
-
-                const deleteBtn = isBoss ? '' :
-                    `<button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                expenseBody.innerHTML += `
-                    <tr class="hover:bg-slate-50/80">
-                        <td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} inline-block mb-0.5">${item.method} • ${item.category}</span><div class="text-[11px] text-slate-400">${item.date}</div></td>
-                        <td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td>
-                        <td class="py-2.5 px-2 text-right font-semibold text-rose-600">-${item.amount.toFixed(2)}</td>
-                        <td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td>
-                    </tr>
-                `;
+                const deleteBtn = isBoss ? '' : `<button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+                expenseBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} inline-block mb-0.5">${item.method} • ${item.category}</span><div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right font-semibold text-rose-600">-${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
             });
 
-            // Cash Shop
-            const cashShopBody = document.getElementById('cashShopTableBody');
-            cashShopBody.innerHTML = '';
+            const cashShopBody = document.getElementById('cashShopTableBody'); cashShopBody.innerHTML = '';
             const filteredCashShop = cashInShop.sort((a, b) => new Date(b.date) - new Date(a.date));
             document.getElementById('cashShopCount').innerText = `${filteredCashShop.length} rekod`;
-
             filteredCashShop.forEach(item => {
                 const isOut = (item.type === 'out');
-                if (item.date && item.date.startsWith(selectedMonth)) {
-                    if (isOut) totalCashShopMonth -= item.amount;
-                    else totalCashShopMonth += item.amount;
-                }
-                const deleteBtn = isBoss ? '' :
-                    `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                const badgeTag = isOut ?
-                    `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>` :
-                    `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>`;
+                if (item.date && item.date.startsWith(selectedMonth)) { if (isOut) totalCashShopMonth -= item.amount; else totalCashShopMonth += item.amount; }
+                const deleteBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+                const badgeTag = isOut ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>` : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>`;
                 const amtClass = isOut ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold';
                 const signStr = isOut ? '-' : '+';
-
-                cashShopBody.innerHTML += `
-                    <tr class="hover:bg-slate-50/80">
-                        <td class="py-2.5 px-2">${badgeTag}<div class="text-[11px] text-slate-400">${item.date}</div></td>
-                        <td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td>
-                        <td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${item.amount.toFixed(2)}</td>
-                        <td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td>
-                    </tr>
-                `;
+                cashShopBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2">${badgeTag}<div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
             });
 
             const totalDeduction = catSewaTotal + catElektrikTotal + catAirTotal + catGajiTotal + catAisTotal + catLainTotal;
             const netProfit = totalSalesMonth - totalDeduction;
-
             document.getElementById('sumTotalSales').innerText = `RM ${totalSalesMonth.toFixed(2)}`;
             document.getElementById('sumNetCash').innerText = `RM ${totalCashShopMonth.toFixed(2)}`;
             document.getElementById('sumTotalDeduction').innerText = `RM ${totalDeduction.toFixed(2)}`;
             document.getElementById('sumExpCash').innerText = `RM ${expCashTotal.toFixed(0)}`;
             document.getElementById('sumExpQR').innerText = `RM ${expQRTotal.toFixed(0)}`;
             document.getElementById('sumExpTnG').innerText = `RM ${expTnGTot.toFixed(0)}`;
-
             const netElement = document.getElementById('sumNetProfit');
             netElement.innerText = `RM ${netProfit.toFixed(2)}`;
             netElement.className = `text-2xl font-bold mt-1 ${netProfit >= 0 ? 'text-sky-400' : 'text-rose-400'}`;
-
             document.getElementById('catSewa').innerText = `RM ${catSewaTotal.toFixed(2)}`;
             document.getElementById('catElektrik').innerText = `RM ${catElektrikTotal.toFixed(2)}`;
             document.getElementById('catAir').innerText = `RM ${catAirTotal.toFixed(2)}`;
@@ -1816,232 +1252,65 @@
             document.getElementById('catLain').innerText = `RM ${catLainTotal.toFixed(2)}`;
         }
 
-        // ============================================================
-        // FUNGSI CETAK PDF LAPORAN STOK
-        // ============================================================
         function downloadStockPDF() {
             const dateVal = document.getElementById('stockDate').value;
-            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric',
-                month: 'long', year: 'numeric' }) : 'Hari ini';
+            const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Hari ini';
             const categories = window.stockCategories || window.defaultCategories;
-            let tableHtml = '';
-            let totalItemsCount = 0,
-                lowStockCount = 0,
-                outOfStockCount = 0;
-
+            let tableHtml = ''; let totalItemsCount = 0, lowStockCount = 0, outOfStockCount = 0;
             Object.keys(categories).forEach(catName => {
-                const items = categories[catName] || [];
-                if (items.length === 0) return;
-                tableHtml += `
-                    <tr style="background-color: #f1f5f9; font-weight: bold;">
-                        <td colspan="4" style="padding: 8px; border: 1px solid #cbd5e1; color: #0f172a; text-transform: uppercase; font-size: 10px;">📂 ${catName} (${items.length} item)</td>
-                    </tr>
-                `;
+                const items = categories[catName] || []; if (items.length === 0) return;
+                tableHtml += `<tr style="background-color:#f1f5f9;font-weight:bold;"><td colspan="4" style="padding:8px;border:1px solid #cbd5e1;color:#0f172a;text-transform:uppercase;font-size:10px;">📂 ${catName} (${items.length} item)</td></tr>`;
                 items.forEach(itemObj => {
                     totalItemsCount++;
-                    const itemName = itemObj.name;
-                    const itemUnit = itemObj.unit || 'pcs';
+                    const itemName = itemObj.name; const itemUnit = itemObj.unit || 'pcs';
                     const itemTarget = itemObj.target !== undefined ? itemObj.target : 5;
                     const currentQty = window.stockData[itemName] !== undefined ? window.stockData[itemName] : 5;
-
-                    let statusBg = '#ecfdf5',
-                        statusColor = '#047857',
-                        statusText = 'Mencukupi';
-                    if (currentQty === 0) {
-                        statusBg = '#fef2f2';
-                        statusColor = '#dc2626';
-                        statusText = 'Habis';
-                        outOfStockCount++;
-                    } else if (currentQty < itemTarget) {
-                        statusBg = '#fffbeb';
-                        statusColor = '#d97706';
-                        statusText = 'Rendah';
-                        lowStockCount++;
-                    }
-                    tableHtml += `
-                        <tr>
-                            <td style="padding: 6px 8px; border: 1px solid #e2e8f0; font-weight: 500;">${itemName}</td>
-                            <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${currentQty} ${itemUnit}</td>
-                            <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center; color: #0284c7; font-weight: bold;">${itemTarget} ${itemUnit}</td>
-                            <td style="padding: 6px 8px; border: 1px solid #e2e8f0; text-align: center;">
-                                <span style="background-color: ${statusBg}; color: ${statusColor}; padding: 2px 8px; border-radius: 12px; font-weight: bold; font-size: 9px; display: inline-block;">${statusText}</span>
-                            </td>
-                        </tr>
-                    `;
+                    let statusBg = '#ecfdf5', statusColor = '#047857', statusText = 'Mencukupi';
+                    if (currentQty === 0) { statusBg = '#fef2f2'; statusColor = '#dc2626'; statusText = 'Habis'; outOfStockCount++; }
+                    else if (currentQty < itemTarget) { statusBg = '#fffbeb'; statusColor = '#d97706'; statusText = 'Rendah'; lowStockCount++; }
+                    tableHtml += `<tr><td style="padding:6px 8px;border:1px solid #e2e8f0;font-weight:500;">${itemName}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;font-weight:bold;">${currentQty} ${itemUnit}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;color:#0284c7;font-weight:bold;">${itemTarget} ${itemUnit}</td><td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:center;"><span style="background-color:${statusBg};color:${statusColor};padding:2px 8px;border-radius:12px;font-weight:bold;font-size:9px;display:inline-block;">${statusText}</span></td></tr>`;
                 });
             });
-
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html lang="ms">
-                <head><meta charset="UTF-8"><title>Laporan Semakan Stok - ${formattedDate}</title>
-                <style>
-                    @page { size: A4; margin: 12mm; }
-                    body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 11px; background: #ffffff; }
-                    .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
-                    .shop-title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
-                    .doc-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
-                    .date-badge { background: #2563eb; color: #ffffff; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; text-align: center; }
-                    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-                    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; }
-                    .card-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; }
-                    .card-val { font-size: 16px; font-weight: 800; margin-top: 2px; }
-                    .stock-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 20px; }
-                    .stock-table th { background: #0f172a; color: #ffffff; padding: 8px; font-weight: bold; text-align: left; text-transform: uppercase; font-size: 9px; }
-                    .footer-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; font-size: 9px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
-                    .sign-box { text-align: center; width: 160px; }
-                    .sign-line { border-bottom: 1px solid #94a3b8; margin-top: 35px; margin-bottom: 4px; }
-                </style>
-                </head>
-                <body>
-                    <div class="header-container">
-                        <div><h1 class="shop-title">📋 Laporan Semakan Stok Harian</h1><p class="doc-sub">Sistem Urus Niaga & Stocktake • Status Bahan, Syrup, Powder & Packaging</p></div>
-                        <div class="date-badge">📅 ${formattedDate}</div>
-                    </div>
-                    <div class="summary-grid">
-                        <div class="card"><div class="card-label">Jumlah Keseluruhan Item</div><div class="card-val" style="color: #0f172a;">${totalItemsCount} Item</div></div>
-                        <div class="card"><div class="card-label">Stok Rendah (&lt; Limit)</div><div class="card-val" style="color: #d97706;">${lowStockCount} Item</div></div>
-                        <div class="card"><div class="card-label">Stok Kehabisan (0)</div><div class="card-val" style="color: #dc2626;">${outOfStockCount} Item</div></div>
-                    </div>
-                    <table class="stock-table">
-                        <thead><tr><th style="width: 40%;">Nama Item / Bahan</th><th style="width: 20%; text-align: center;">Baki Semasa</th><th style="width: 20%; text-align: center;">Target Limit</th><th style="width: 20%; text-align: center;">Status</th></tr></thead>
-                        <tbody>${tableHtml}</tbody>
-                    </table>
-                    <div class="footer-bar">
-                        <div><p style="margin: 0;">Laporan semakan stok dijana secara automatik melalui sistem cloud sync.</p><p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p></div>
-                        <div class="sign-box"><div class="sign-line"></div><span>Disahkan Oleh (Staff / Boss)</span></div>
-                    </div>
-                    <script>window.onload = function() { window.print(); };<\/script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
+            const w = window.open('', '_blank');
+            w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Laporan Stok - ${formattedDate}</title><style>@page{size:A4;margin:12mm;}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#0f172a;margin:0;padding:0;font-size:11px;background:#fff;}.header-container{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0f172a;padding-bottom:12px;margin-bottom:16px;}.shop-title{font-size:18px;font-weight:800;margin:0;letter-spacing:-.5px;text-transform:uppercase;}.doc-sub{font-size:11px;color:#64748b;margin-top:3px;}.date-badge{background:#2563eb;color:#fff;padding:6px 14px;border-radius:8px;font-weight:bold;font-size:12px;}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;}.card-label{font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;}.card-val{font-size:16px;font-weight:800;margin-top:2px;}.stock-table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:20px;}.stock-table th{background:#0f172a;color:#fff;padding:8px;font-weight:bold;text-align:left;text-transform:uppercase;font-size:9px;}.footer-bar{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:9px;color:#64748b;border-top:1px dashed #cbd5e1;padding-top:12px;}.sign-box{text-align:center;width:160px;}.sign-line{border-bottom:1px solid #94a3b8;margin-top:35px;margin-bottom:4px;}</style></head><body><div class="header-container"><div><h1 class="shop-title">📋 Laporan Semakan Stok Harian</h1><p class="doc-sub">Sistem Urus Niaga & Stocktake</p></div><div class="date-badge">📅 ${formattedDate}</div></div><div class="summary-grid"><div class="card"><div class="card-label">Jumlah Keseluruhan Item</div><div class="card-val">${totalItemsCount} Item</div></div><div class="card"><div class="card-label">Stok Rendah</div><div class="card-val" style="color:#d97706;">${lowStockCount} Item</div></div><div class="card"><div class="card-label">Stok Kehabisan</div><div class="card-val" style="color:#dc2626;">${outOfStockCount} Item</div></div></div><table class="stock-table"><thead><tr><th style="width:40%;">Nama Item / Bahan</th><th style="width:20%;text-align:center;">Baki Semasa</th><th style="width:20%;text-align:center;">Target Limit</th><th style="width:20%;text-align:center;">Status</th></tr></thead><tbody>${tableHtml}</tbody></table><div class="footer-bar"><div><p style="margin:0;">Laporan semakan stok dijana automatik melalui sistem cloud sync.</p><p style="margin:2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p></div><div class="sign-box"><div class="sign-line"></div><span>Disahkan Oleh (Staff / Boss)</span></div></div><script>window.onload=function(){window.print();};<\/script></body></html>`);
+            w.document.close();
         }
 
-        // ============================================================
-        // FUNGSI CETAK PDF LAPORAN KEWANGAN
-        // ============================================================
         function downloadPDF() {
             const selectedMonth = document.getElementById('filterMonth').value;
-            const parts = selectedMonth.split('-');
-            const yearStr = parts[0] || '';
-            const monthStr = parts[1] || '';
-            const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September',
-                'Oktober', 'November', 'Disember'
-            ];
+            const parts = selectedMonth.split('-'); const yearStr = parts[0] || ''; const monthStr = parts[1] || '';
+            const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
             const monthName = monthNames[parseInt(monthStr, 10) - 1] || selectedMonth;
             const formattedMonthTitle = `${monthName} ${yearStr}`;
-
             const totalSales = document.getElementById('sumTotalSales').innerText;
             const totalCashInShop = document.getElementById('sumNetCash').innerText;
             const totalDeduction = document.getElementById('sumTotalDeduction').innerText;
             const netProfit = document.getElementById('sumNetProfit').innerText;
             const expCash = document.getElementById('sumExpCash').innerText;
             const expQR = document.getElementById('sumExpQR').innerText;
-
             const monthSales = sales.filter(s => s.date && s.date.startsWith(selectedMonth));
             const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
             const monthCashShop = cashInShop.filter(c => c.date && c.date.startsWith(selectedMonth));
-
-            let salesTableRows = monthSales.map(s =>
-                `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.date}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${s.desc}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #059669; font-weight: 600;">+RM ${parseFloat(s.amount).toFixed(2)}</td></tr>`
-            ).join('');
-            if (monthSales.length === 0) salesTableRows =
-                `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod jualan bagi bulan ini</td></tr>`;
-
-            let expenseTableRows = monthExpenses.map(e =>
-                `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.date}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;"><span style="font-size: 8.5px; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-weight: bold; border: 1px solid #cbd5e1;">${e.method}</span> ${e.category}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${e.desc}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #dc2626; font-weight: 600;">-RM ${parseFloat(e.amount).toFixed(2)}</td></tr>`
-            ).join('');
-            if (monthExpenses.length === 0) expenseTableRows =
-                `<tr><td colspan="4" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
-
+            let salesTableRows = monthSales.map(s => `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${s.date}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${s.desc}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;color:#059669;font-weight:600;">+RM ${parseFloat(s.amount).toFixed(2)}</td></tr>`).join('');
+            if (monthSales.length === 0) salesTableRows = `<tr><td colspan="3" style="text-align:center;padding:10px;color:#94a3b8;font-style:italic;">Tiada rekod jualan bagi bulan ini</td></tr>`;
+            let expenseTableRows = monthExpenses.map(e => `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${e.date}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;"><span style="font-size:8.5px;background:#f1f5f9;padding:2px 5px;border-radius:4px;font-weight:bold;border:1px solid #cbd5e1;">${e.method}</span> ${e.category}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${e.desc}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;color:#dc2626;font-weight:600;">-RM ${parseFloat(e.amount).toFixed(2)}</td></tr>`).join('');
+            if (monthExpenses.length === 0) expenseTableRows = `<tr><td colspan="4" style="text-align:center;padding:10px;color:#94a3b8;font-style:italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
             let cashShopTableRows = monthCashShop.map(c => {
-                const isOut = (c.type === 'out');
-                const signStr = isOut ? '-' : '+';
-                const colorStr = isOut ? '#dc2626' : '#d97706';
+                const isOut = (c.type === 'out'); const signStr = isOut ? '-' : '+'; const colorStr = isOut ? '#dc2626' : '#d97706';
                 const badgeTag = isOut ? '[DUIT KELUAR] ' : '[CASH TINGGAL] ';
-                return `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${c.date}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;"><strong style="color: ${colorStr};">${badgeTag}</strong>${c.desc}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${colorStr}; font-weight: 600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td></tr>`;
+                return `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${c.date}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;"><strong style="color:${colorStr};">${badgeTag}</strong>${c.desc}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;color:${colorStr};font-weight:600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td></tr>`;
             }).join('');
-            if (monthCashShop.length === 0) cashShopTableRows =
-                `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #94a3b8; font-style: italic;">Tiada rekod cash kedai bagi bulan ini</td></tr>`;
-
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html lang="ms">
-                <head><meta charset="UTF-8"><title>Laporan Kewangan Lengkap - ${formattedMonthTitle}</title>
-                <style>
-                    @page { size: A4; margin: 12mm; }
-                    body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 10px; background: #ffffff; }
-                    .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 14px; }
-                    .shop-title { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; text-transform: uppercase; }
-                    .doc-sub { font-size: 10px; color: #64748b; margin-top: 2px; }
-                    .month-badge { background: #0f172a; color: #ffffff; padding: 5px 12px; border-radius: 8px; font-weight: bold; font-size: 11px; text-align: center; }
-                    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
-                    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
-                    .card-label { font-size: 8.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-                    .card-val { font-size: 14px; font-weight: 800; margin-top: 3px; }
-                    .text-emerald { color: #059669; }
-                    .text-amber { color: #d97706; }
-                    .text-rose { color: #dc2626; }
-                    .text-sky { color: #0284c7; }
-                    .section-title { font-size: 11px; font-weight: 800; color: #0f172a; border-bottom: 1.5px solid #0f172a; padding-bottom: 3px; margin-top: 14px; margin-bottom: 6px; text-transform: uppercase; }
-                    .data-table { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-bottom: 12px; }
-                    .data-table th { background: #0f172a; color: #ffffff; padding: 6px 8px; font-weight: bold; text-align: left; text-transform: uppercase; font-size: 8.5px; }
-                    .footer-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; font-size: 8.5px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
-                    .sign-box { text-align: center; width: 150px; }
-                    .sign-line { border-bottom: 1px solid #94a3b8; margin-top: 30px; margin-bottom: 4px; }
-                </style>
-                </head>
-                <body>
-                    <div class="header-container"><div><h1 class="shop-title">Laporan Kewangan Bulanan</h1><p class="doc-sub">Sistem Urus Niaga & Belanja • Rekod Terperinci Sale, Belanja & Cash Kedai</p></div><div class="month-badge">${formattedMonthTitle}</div></div>
-                    <div class="summary-grid">
-                        <div class="card"><div class="card-label">Jumlah Jualan</div><div class="card-val text-emerald">${totalSales}</div><div style="font-size: 8px; color: #64748b; margin-top: 3px;">Total Sale Kedai</div></div>
-                        <div class="card"><div class="card-label">Baki Cash Kedai</div><div class="card-val text-amber">${totalCashInShop}</div><div style="font-size: 8px; color: #64748b; margin-top: 3px;">Peti Tunai / Float</div></div>
-                        <div class="card"><div class="card-label">Jumlah Kos / Belanja</div><div class="card-val text-rose">${totalDeduction}</div><div style="font-size: 8px; color: #64748b; margin-top: 3px;">Cash: ${expCash} | QR: ${expQR}</div></div>
-                        <div class="card"><div class="card-label">Untung Bersih</div><div class="card-val text-sky">${netProfit}</div></div>
-                    </div>
-                    <div class="section-title">📋 Rekod Jualan Harian (Total Sale)</div>
-                    <table class="data-table"><thead><tr><th style="width: 20%;">Tarikh</th><th>Keterangan / Nota</th><th style="width: 25%; text-align: right;">Total Sale (RM)</th></tr></thead><tbody>${salesTableRows}</tbody></table>
-                    <div class="section-title">🧾 Rekod Resit & Perbelanjaan</div>
-                    <table class="data-table"><thead><tr><th style="width: 18%;">Tarikh</th><th style="width: 28%;">Kaedah / Kategori</th><th>Keterangan / Penerima</th><th style="width: 22%; text-align: right;">Jumlah (RM)</th></tr></thead><tbody>${expenseTableRows}</tbody></table>
-                    <div class="section-title">🏪 Rekod Cash Kedai (Duit Tinggal & Duit Keluar)</div>
-                    <table class="data-table"><thead><tr><th style="width: 20%;">Tarikh</th><th>Catatan / Nota Transaksi</th><th style="width: 25%; text-align: right;">Jumlah (RM)</th></tr></thead><tbody>${cashShopTableRows}</tbody></table>
-                    <div class="footer-bar"><div><p style="margin: 0;">Laporan kewangan terperinci ini dijana secara automatik melalui sistem cloud sync.</p><p style="margin: 2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p></div><div class="sign-box"><div class="sign-line"></div><span>Disahkan Oleh (Staff / Boss)</span></div></div>
-                    <script>window.onload = function() { window.print(); };<\/script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
+            if (monthCashShop.length === 0) cashShopTableRows = `<tr><td colspan="3" style="text-align:center;padding:10px;color:#94a3b8;font-style:italic;">Tiada rekod cash kedai bagi bulan ini</td></tr>`;
+            const w = window.open('', '_blank');
+            w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Laporan Kewangan - ${formattedMonthTitle}</title><style>@page{size:A4;margin:12mm;}body{font-family:'Plus Jakarta Sans',Arial,sans-serif;color:#0f172a;margin:0;padding:0;font-size:10px;}.header-container{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:14px;}.shop-title{font-size:16px;font-weight:800;margin:0;text-transform:uppercase;}.doc-sub{font-size:10px;color:#64748b;margin-top:2px;}.month-badge{background:#0f172a;color:#fff;padding:5px 12px;border-radius:8px;font-weight:bold;font-size:11px;}.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}.card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;}.card-label{font-size:8.5px;font-weight:700;color:#64748b;text-transform:uppercase;}.card-val{font-size:14px;font-weight:800;margin-top:3px;}.text-emerald{color:#059669;}.text-amber{color:#d97706;}.text-rose{color:#dc2626;}.text-sky{color:#0284c7;}.section-title{font-size:11px;font-weight:800;border-bottom:1.5px solid #0f172a;padding-bottom:3px;margin-top:14px;margin-bottom:6px;text-transform:uppercase;}.data-table{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:12px;}.data-table th{background:#0f172a;color:#fff;padding:6px 8px;font-weight:bold;text-align:left;text-transform:uppercase;font-size:8.5px;}.footer-bar{display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px;font-size:8.5px;color:#64748b;border-top:1px dashed #cbd5e1;padding-top:10px;}.sign-box{text-align:center;width:150px;}.sign-line{border-bottom:1px solid #94a3b8;margin-top:30px;margin-bottom:4px;}</style></head><body><div class="header-container"><div><h1 class="shop-title">Laporan Kewangan Bulanan</h1><p class="doc-sub">Sistem Urus Niaga & Belanja</p></div><div class="month-badge">${formattedMonthTitle}</div></div><div class="summary-grid"><div class="card"><div class="card-label">Jumlah Jualan</div><div class="card-val text-emerald">${totalSales}</div></div><div class="card"><div class="card-label">Baki Cash Kedai</div><div class="card-val text-amber">${totalCashInShop}</div></div><div class="card"><div class="card-label">Jumlah Kos / Belanja</div><div class="card-val text-rose">${totalDeduction}</div></div><div class="card"><div class="card-label">Untung Bersih</div><div class="card-val text-sky">${netProfit}</div></div></div><div class="section-title">📋 Rekod Jualan Harian</div><table class="data-table"><thead><tr><th style="width:20%;">Tarikh</th><th>Keterangan / Nota</th><th style="width:25%;text-align:right;">Total Sale (RM)</th></tr></thead><tbody>${salesTableRows}</tbody></table><div class="section-title">🧾 Rekod Resit & Perbelanjaan</div><table class="data-table"><thead><tr><th style="width:18%;">Tarikh</th><th style="width:28%;">Kaedah / Kategori</th><th>Keterangan / Penerima</th><th style="width:22%;text-align:right;">Jumlah (RM)</th></tr></thead><tbody>${expenseTableRows}</tbody></table><div class="section-title">🏪 Rekod Cash Kedai</div><table class="data-table"><thead><tr><th style="width:20%;">Tarikh</th><th>Catatan / Nota</th><th style="width:25%;text-align:right;">Jumlah (RM)</th></tr></thead><tbody>${cashShopTableRows}</tbody></table><div class="footer-bar"><div><p style="margin:0;">Laporan kewangan dijana automatik melalui sistem cloud sync.</p><p style="margin:2px 0 0 0;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p></div><div class="sign-box"><div class="sign-line"></div><span>Disahkan Oleh (Staff / Boss)</span></div></div><script>window.onload=function(){window.print();};<\/script></body></html>`);
+            w.document.close();
         }
 
         // ============================================================
-        // PWA: SERVICE WORKER + INSTALL + OFFLINE DETECTION
+        // PWA: INSTALL + OFFLINE DETECTION
+        // (SW registration sudah dijalankan di <head>)
         // ============================================================
 
-        // 1. DAFTAR SERVICE WORKER
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js', { scope: './' })
-                    .then((reg) => {
-                        console.log('✅ Service Worker berdaftar:', reg.scope);
-
-                        // Semak kemaskini
-                        reg.addEventListener('updatefound', () => {
-                            const newWorker = reg.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    showToast('🔄 Versi baru tersedia. Tutup & buka semula app.');
-                                }
-                            });
-                        });
-                    })
-                    .catch((err) => console.error('❌ Service Worker gagal:', err));
-            });
-        }
-
-        // ===== PWA INSTALL PROMPT (VARIABLE GLOBAL) =====
         let deferredPrompt = null;
         const btnInstall = document.getElementById('btnInstallPWA');
 
@@ -2057,21 +1326,16 @@
             showToast('🎉 App berjaya diinstall!');
         });
 
-        // ===== ONLINE / OFFLINE STATUS =====
         function updateOnlineStatus() {
             const badge = document.getElementById('offlineBadge');
             if (!badge) return;
-            if (navigator.onLine) {
-                badge.classList.add('hidden');
-            } else {
-                badge.classList.remove('hidden');
-            }
+            if (navigator.onLine) badge.classList.add('hidden');
+            else badge.classList.remove('hidden');
         }
         window.addEventListener('online', () => { updateOnlineStatus(); showToast('🌐 Kembali online — sync data...'); });
-        window.addEventListener('offline', () => { updateOnlineStatus(); showToast('📴 Mod offline — data akan disync bila online'); });
+        window.addEventListener('offline', () => { updateOnlineStatus(); showToast('📴 Mod offline'); });
 
         function installPWA() {
-            // Detect peranti & browser
             const ua = navigator.userAgent;
             const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             const isAndroid = /Android/i.test(ua);
@@ -2081,137 +1345,37 @@
             const isFirefox = /Firefox|FxiOS/i.test(ua);
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-            // Kalau dah install, bagitahu
-            if (isStandalone) {
-                showToast('✅ App sudah diinstall!');
-                return;
-            }
+            if (isStandalone) { showToast('✅ App sudah diinstall!'); return; }
 
-            // Kalau Chrome/Edge support prompt → guna butang auto
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choice) => {
-                    if (choice.outcome === 'accepted') {
-                        showToast('🎉 App berjaya diinstall!');
-                        if (btnInstall) btnInstall.classList.add('hidden');
-                    } else {
-                        showToast('❌ Install dibatalkan.');
-                    }
+                    if (choice.outcome === 'accepted') { showToast('🎉 App berjaya diinstall!'); if (btnInstall) btnInstall.classList.add('hidden'); }
+                    else { showToast('❌ Install dibatalkan.'); }
                     deferredPrompt = null;
                 });
                 return;
             }
 
-            // === FALLBACK: Bagi arahan manual ikut browser ===
-
-            // iOS + Safari
-            if (isIOS && isSafari) {
-                alert(
-                    '📱 CARA INSTALL DI IPHONE/IPAD (SAFARI)\n' +
-                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                    '1️⃣ Tekan ikon SHARE 📤 di bawah skrin\n' +
-                    '   (kotak dengan anak panah naik)\n\n' +
-                    '2️⃣ Skrol ke bawah, cari "Add to Home Screen"\n' +
-                    '   (Tambah ke Skrin Utama)\n\n' +
-                    '3️⃣ Tekan "Add" di penjuru atas kanan\n\n' +
-                    '✅ App akan muncul di home screen anda!'
-                );
-                return;
-            }
-
-            // iOS tapi bukan Safari
-            if (isIOS && !isSafari) {
-                alert(
-                    '📱 ANDA MENGGUNAKAN iOS\n' +
-                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                    '⚠️ Untuk install, WAJIB guna SAFARI\n' +
-                    '(bukan Chrome/Firefox di iPhone)\n\n' +
-                    '1️⃣ Copy link URL ini\n' +
-                    '2️⃣ Buka app SAFARI\n' +
-                    '3️⃣ Paste link & buka\n' +
-                    '4️⃣ Tekan Share 📤 → "Add to Home Screen"\n\n' +
-                    '💡 Apple hadkan install hanya melalui Safari.'
-                );
-                return;
-            }
-
-            // Android + Chrome
-            if (isAndroid && isChrome) {
-                alert(
-                    '🤖 CARA INSTALL DI ANDROID (CHROME)\n' +
-                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                    '1️⃣ Tekan ikon TITIK TIGA ⋮ di penjuru atas kanan\n\n' +
-                    '2️⃣ Pilih "Install app" atau\n' +
-                    '   "Add to Home screen"\n\n' +
-                    '3️⃣ Tekan "Install"\n\n' +
-                    '✅ App akan muncul di home screen!'
-                );
-                return;
-            }
-
-            // Desktop Chrome/Edge
-            if (isChrome || isEdge) {
-                alert(
-                    '💻 CARA INSTALL DI DESKTOP (CHROME/EDGE)\n' +
-                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                    '1️⃣ Lihat pada bar alamat (URL bar) di atas\n\n' +
-                    '2️⃣ Cari ikon INSTALL ⬇️ atau ➕\n' +
-                    '   (biasanya di kanan sekali URL)\n\n' +
-                    '3️⃣ Klik ikon tersebut → "Install"\n\n' +
-                    '💡 ATAU: Menu ⋮ → "Install [nama app]"'
-                );
-                return;
-            }
-
-            // Firefox
-            if (isFirefox) {
-                alert(
-                    '🦊 ANDA MENGGUNAKAN FIREFOX\n' +
-                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                    '⚠️ Firefox tak support install PWA secara automatik.\n\n' +
-                    '💡 Sila guna:\n' +
-                    '• CHROME (Android/Desktop)\n' +
-                    '• SAFARI (iPhone/iPad)\n' +
-                    '• EDGE (Desktop/Android)\n\n' +
-                    'untuk install app ini.'
-                );
-                return;
-            }
-
-            // Fallback umum
-            alert(
-                'ℹ️ CARA INSTALL APP\n' +
-                '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-                '1️⃣ Buka menu browser anda (⋮ atau ⋯)\n\n' +
-                '2️⃣ Cari pilihan:\n' +
-                '   • "Install App"\n' +
-                '   • "Add to Home Screen"\n' +
-                '   • "Install [nama app]"\n\n' +
-                '3️⃣ Ikut arahan pada skrin'
-            );
+            if (isIOS && isSafari) { alert('📱 CARA INSTALL DI IPHONE/IPAD (SAFARI)\n━━━━━━━━━━━━━━━━━━━━━━\n\n1️⃣ Tekan ikon SHARE 📤 di bawah skrin\n2️⃣ Skrol cari "Add to Home Screen"\n3️⃣ Tekan "Add"\n\n✅ App akan muncul di home screen!'); return; }
+            if (isIOS && !isSafari) { alert('📱 ANDA MENGGUNAKAN iOS\n━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ WAJIB guna SAFARI untuk install.\n\n1️⃣ Copy link URL ini\n2️⃣ Buka app SAFARI\n3️⃣ Paste link & buka\n4️⃣ Tekan Share 📤 → "Add to Home Screen"'); return; }
+            if (isAndroid && isChrome) { alert('🤖 CARA INSTALL DI ANDROID (CHROME)\n━━━━━━━━━━━━━━━━━━━━━━\n\n1️⃣ Tekan ikon TITIK TIGA ⋮ atas kanan\n2️⃣ Pilih "Install app"\n3️⃣ Tekan "Install"\n\n✅ App akan muncul di home screen!'); return; }
+            if (isChrome || isEdge) { alert('💻 CARA INSTALL DI DESKTOP\n━━━━━━━━━━━━━━━━━━━━━━\n\n1️⃣ Lihat pada bar alamat (URL bar)\n2️⃣ Cari ikon INSTALL ⬇️ atau ➕\n3️⃣ Klik → "Install"\n\n💡 ATAU: Menu ⋮ → "Install [nama app]"'); return; }
+            if (isFirefox) { alert('🦊 FIREFOX TAK SUPPORT PWA\n━━━━━━━━━━━━━━━━━━━━━━\n\nSila guna:\n• CHROME\n• SAFARI (iOS)\n• EDGE'); return; }
+            alert('ℹ️ CARA INSTALL APP\n━━━━━━━━━━━━━━━━━━━━━━\n\n1️⃣ Buka menu browser (⋮ atau ⋯)\n2️⃣ Cari "Install App" / "Add to Home Screen"\n3️⃣ Ikut arahan');
         }
 
-        // 5. HALANG ZOOM PELIK DI MOBILE
         document.addEventListener('gesturestart', (e) => e.preventDefault());
 
         // ============================================================
         // INISIALISASI
         // ============================================================
         window.addEventListener('DOMContentLoaded', () => {
-            if (!currentRole) {
-                // Biarkan onAuthStateChanged mengendalikan
-            } else {
-                applyRoleUI();
-            }
+            if (currentRole) applyRoleUI();
             initMasterStockListener();
-            updateOnlineStatus(); // PWA: semak status online
-
-            // PWA: Auto-sembunyi butang install kalau dah install
+            updateOnlineStatus();
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-            if (isStandalone) {
-                const btn = document.getElementById('btnInstallPWA');
-                if (btn) btn.classList.add('hidden');
-            }
+            if (isStandalone) { const btn = document.getElementById('btnInstallPWA'); if (btn) btn.classList.add('hidden'); }
         });
     </script>
 </body>
