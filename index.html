@@ -2041,142 +2041,156 @@
             });
         }
 
-   function installPWA() {
-    // Detect peranti & browser
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isAndroid = /Android/i.test(ua);
-    const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
-    const isChrome = /Chrome|CriOS/i.test(ua) && !/Edge|Edg/i.test(ua);
-    const isEdge = /Edg/i.test(ua);
-    const isFirefox = /Firefox|FxiOS/i.test(ua);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        // ===== PWA INSTALL PROMPT (VARIABLE GLOBAL) =====
+        let deferredPrompt = null;
+        const btnInstall = document.getElementById('btnInstallPWA');
 
-    // Kalau dah install, bagitahu
-    if (isStandalone) {
-        showToast('✅ App sudah diinstall!');
-        return;
-    }
-
-    // Kalau Chrome/Edge support prompt → guna butang auto
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choice) => {
-            if (choice.outcome === 'accepted') {
-                showToast('🎉 App berjaya diinstall!');
-                if (btnInstall) btnInstall.classList.add('hidden');
-            } else {
-                showToast('❌ Install dibatalkan.');
-            }
-            deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (btnInstall) btnInstall.classList.remove('hidden');
         });
-        return;
-    }
 
-    // === FALLBACK: Bagi arahan manual ikut browser ===
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            if (btnInstall) btnInstall.classList.add('hidden');
+            showToast('🎉 App berjaya diinstall!');
+        });
 
-    // iOS + Safari
-    if (isIOS && isSafari) {
-        alert(
-            '📱 CARA INSTALL DI IPHONE/IPAD (SAFARI)\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-            '1️⃣ Tekan ikon SHARE 📤 di bawah skrin\n' +
-            '   (kotak dengan anak panah naik)\n\n' +
-            '2️⃣ Skrol ke bawah, cari "Add to Home Screen"\n' +
-            '   (Tambah ke Skrin Utama)\n\n' +
-            '3️⃣ Tekan "Add" di penjuru atas kanan\n\n' +
-            '✅ App akan muncul di home screen anda!'
-        );
-        return;
-    }
+        // ===== ONLINE / OFFLINE STATUS =====
+        function updateOnlineStatus() {
+            const badge = document.getElementById('offlineBadge');
+            if (!badge) return;
+            if (navigator.onLine) {
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+            }
+        }
+        window.addEventListener('online', () => { updateOnlineStatus(); showToast('🌐 Kembali online — sync data...'); });
+        window.addEventListener('offline', () => { updateOnlineStatus(); showToast('📴 Mod offline — data akan disync bila online'); });
 
-    // iOS tapi bukan Safari
-    if (isIOS && !isSafari) {
-        alert(
-            '📱 ANDA MENGGUNAKAN iOS\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-            '⚠️ Untuk install, WAJIB guna SAFARI\n' +
-            '(bukan Chrome/Firefox di iPhone)\n\n' +
-            '1️⃣ Copy link URL ini\n' +
-            '2️⃣ Buka app SAFARI\n' +
-            '3️⃣ Paste link & buka\n' +
-            '4️⃣ Tekan Share 📤 → "Add to Home Screen"\n\n' +
-            '💡 Apple hadkan install hanya melalui Safari.'
-        );
-        return;
-    }
+        function installPWA() {
+            // Detect peranti & browser
+            const ua = navigator.userAgent;
+            const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const isAndroid = /Android/i.test(ua);
+            const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+            const isChrome = /Chrome|CriOS/i.test(ua) && !/Edge|Edg/i.test(ua);
+            const isEdge = /Edg/i.test(ua);
+            const isFirefox = /Firefox|FxiOS/i.test(ua);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-    // Android + Chrome
-    if (isAndroid && isChrome) {
-        alert(
-            '🤖 CARA INSTALL DI ANDROID (CHROME)\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-            '1️⃣ Tekan ikon TITIK TIGA ⋮ di penjuru atas kanan\n\n' +
-            '2️⃣ Pilih "Install app" atau\n' +
-            '   "Add to Home screen"\n\n' +
-            '3️⃣ Tekan "Install"\n\n' +
-            '✅ App akan muncul di home screen!'
-        );
-        return;
-    }
+            // Kalau dah install, bagitahu
+            if (isStandalone) {
+                showToast('✅ App sudah diinstall!');
+                return;
+            }
 
-    // Desktop Chrome/Edge
-    if (isChrome || isEdge) {
-        alert(
-            '💻 CARA INSTALL DI DESKTOP (CHROME/EDGE)\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-            '1️⃣ Lihat pada bar alamat (URL bar) di atas\n\n' +
-            '2️⃣ Cari ikon INSTALL ⬇️ atau ➕\n' +
-            '   (biasanya di kanan sekali URL)\n\n' +
-            '3️⃣ Klik ikon tersebut → "Install"\n\n' +
-            '💡 ATAU: Menu ⋮ → "Install [nama app]"'
-        );
-        return;
-    }
+            // Kalau Chrome/Edge support prompt → guna butang auto
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choice) => {
+                    if (choice.outcome === 'accepted') {
+                        showToast('🎉 App berjaya diinstall!');
+                        if (btnInstall) btnInstall.classList.add('hidden');
+                    } else {
+                        showToast('❌ Install dibatalkan.');
+                    }
+                    deferredPrompt = null;
+                });
+                return;
+            }
 
-    // Firefox
-    if (isFirefox) {
-        alert(
-            '🦊 ANDA MENGGUNAKAN FIREFOX\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-            '⚠️ Firefox tak support install PWA secara automatik.\n\n' +
-            '💡 Sila guna:\n' +
-            '• CHROME (Android/Desktop)\n' +
-            '• SAFARI (iPhone/iPad)\n' +
-            '• EDGE (Desktop/Android)\n\n' +
-            'untuk install app ini.'
-        );
-        return;
-    }
+            // === FALLBACK: Bagi arahan manual ikut browser ===
 
-    // Fallback umum
-    alert(
-        'ℹ️ CARA INSTALL APP\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-        '1️⃣ Buka menu browser anda (⋮ atau ⋯)\n\n' +
-        '2️⃣ Cari pilihan:\n' +
-        '   • "Install App"\n' +
-        '   • "Add to Home Screen"\n' +
-        '   • "Install [nama app]"\n\n' +
-        '3️⃣ Ikut arahan pada skrin'
-    );
-}
-    window.addEventListener('DOMContentLoaded', () => {
-    if (!currentRole) {
-        // Biarkan onAuthStateChanged mengendalikan
-    } else {
-        applyRoleUI();
-    }
-    initMasterStockListener();
-    updateOnlineStatus(); // PWA: semak status online
+            // iOS + Safari
+            if (isIOS && isSafari) {
+                alert(
+                    '📱 CARA INSTALL DI IPHONE/IPAD (SAFARI)\n' +
+                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                    '1️⃣ Tekan ikon SHARE 📤 di bawah skrin\n' +
+                    '   (kotak dengan anak panah naik)\n\n' +
+                    '2️⃣ Skrol ke bawah, cari "Add to Home Screen"\n' +
+                    '   (Tambah ke Skrin Utama)\n\n' +
+                    '3️⃣ Tekan "Add" di penjuru atas kanan\n\n' +
+                    '✅ App akan muncul di home screen anda!'
+                );
+                return;
+            }
 
-    // PWA: Auto-sembunyi butang install kalau dah install
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (isStandalone) {
-        const btn = document.getElementById('btnInstallPWA');
-        if (btn) btn.classList.add('hidden');
-    }
-});
+            // iOS tapi bukan Safari
+            if (isIOS && !isSafari) {
+                alert(
+                    '📱 ANDA MENGGUNAKAN iOS\n' +
+                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                    '⚠️ Untuk install, WAJIB guna SAFARI\n' +
+                    '(bukan Chrome/Firefox di iPhone)\n\n' +
+                    '1️⃣ Copy link URL ini\n' +
+                    '2️⃣ Buka app SAFARI\n' +
+                    '3️⃣ Paste link & buka\n' +
+                    '4️⃣ Tekan Share 📤 → "Add to Home Screen"\n\n' +
+                    '💡 Apple hadkan install hanya melalui Safari.'
+                );
+                return;
+            }
+
+            // Android + Chrome
+            if (isAndroid && isChrome) {
+                alert(
+                    '🤖 CARA INSTALL DI ANDROID (CHROME)\n' +
+                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                    '1️⃣ Tekan ikon TITIK TIGA ⋮ di penjuru atas kanan\n\n' +
+                    '2️⃣ Pilih "Install app" atau\n' +
+                    '   "Add to Home screen"\n\n' +
+                    '3️⃣ Tekan "Install"\n\n' +
+                    '✅ App akan muncul di home screen!'
+                );
+                return;
+            }
+
+            // Desktop Chrome/Edge
+            if (isChrome || isEdge) {
+                alert(
+                    '💻 CARA INSTALL DI DESKTOP (CHROME/EDGE)\n' +
+                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                    '1️⃣ Lihat pada bar alamat (URL bar) di atas\n\n' +
+                    '2️⃣ Cari ikon INSTALL ⬇️ atau ➕\n' +
+                    '   (biasanya di kanan sekali URL)\n\n' +
+                    '3️⃣ Klik ikon tersebut → "Install"\n\n' +
+                    '💡 ATAU: Menu ⋮ → "Install [nama app]"'
+                );
+                return;
+            }
+
+            // Firefox
+            if (isFirefox) {
+                alert(
+                    '🦊 ANDA MENGGUNAKAN FIREFOX\n' +
+                    '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                    '⚠️ Firefox tak support install PWA secara automatik.\n\n' +
+                    '💡 Sila guna:\n' +
+                    '• CHROME (Android/Desktop)\n' +
+                    '• SAFARI (iPhone/iPad)\n' +
+                    '• EDGE (Desktop/Android)\n\n' +
+                    'untuk install app ini.'
+                );
+                return;
+            }
+
+            // Fallback umum
+            alert(
+                'ℹ️ CARA INSTALL APP\n' +
+                '━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+                '1️⃣ Buka menu browser anda (⋮ atau ⋯)\n\n' +
+                '2️⃣ Cari pilihan:\n' +
+                '   • "Install App"\n' +
+                '   • "Add to Home Screen"\n' +
+                '   • "Install [nama app]"\n\n' +
+                '3️⃣ Ikut arahan pada skrin'
+            );
+        }
+
         // 5. HALANG ZOOM PELIK DI MOBILE
         document.addEventListener('gesturestart', (e) => e.preventDefault());
 
@@ -2191,8 +2205,14 @@
             }
             initMasterStockListener();
             updateOnlineStatus(); // PWA: semak status online
+
+            // PWA: Auto-sembunyi butang install kalau dah install
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isStandalone) {
+                const btn = document.getElementById('btnInstallPWA');
+                if (btn) btn.classList.add('hidden');
+            }
         });
     </script>
 </body>
 </html>
-`
