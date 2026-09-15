@@ -3,21 +3,35 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ===== PWA META ===== -->
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="Sistem Urus Niaga, Belanja, Stocktake & Cash Kedai dengan auto-sync cloud." />
+    <link rel="manifest" href="manifest.json" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="UrusNiaga" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+    <!-- Ikon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+
     <title>Sistem Urus Niaga & Stocktake (Email Login)</title>
+
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com">
-    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
     <!-- Firebase v9 compat -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
-    </script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
-    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -118,6 +132,11 @@
         .auth-panel.active {
             display: block;
         }
+
+        /* PWA: Safe area untuk peranti notch */
+        body {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-16">
@@ -142,6 +161,16 @@
                     <span class="text-xs font-semibold text-slate-600 px-1">Bulan:</span>
                     <input type="month" id="filterMonth" onchange="renderFinance()" class="bg-white text-xs font-medium text-slate-700 py-1 px-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
+
+                <!-- Butang Install PWA -->
+                <button id="btnInstallPWA" onclick="installPWA()" class="hidden text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white border border-emerald-500 transition-all flex items-center gap-1.5 shadow-sm">
+                    ⬇️ Install App
+                </button>
+
+                <!-- Status Offline -->
+                <span id="offlineBadge" class="hidden text-xs font-bold px-3 py-1.5 rounded-xl bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-1">
+                    📴 Offline
+                </span>
 
                 <button onclick="toggleChatModal()" class="relative text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 active:scale-95 text-indigo-600 border border-indigo-200 transition-all flex items-center gap-1.5">
                     💬 Mesej
@@ -919,7 +948,7 @@
         });
 
         // ============================================================
-        // APPLY ROLE UI (sama seperti asal)
+        // APPLY ROLE UI
         // ============================================================
         function applyRoleUI() {
             const userName = sessionStorage.getItem('user_name') || 'Pengguna';
@@ -959,7 +988,7 @@
         }
 
         // ============================================================
-        // MODAL CASH KEDAI (sama)
+        // MODAL CASH KEDAI
         // ============================================================
         function openCashShopModal() {
             if (currentRole === 'boss') {
@@ -993,7 +1022,7 @@
         });
 
         // ============================================================
-        // SISTEM CHAT (sama)
+        // SISTEM CHAT
         // ============================================================
         let isChatOpen = false;
         let chatMessages = [];
@@ -1140,7 +1169,7 @@
         }
 
         // ============================================================
-        // MODAL STOCKTAKE (sama)
+        // MODAL STOCKTAKE
         // ============================================================
         function openStockModal() {
             const modal = document.getElementById('stockModal');
@@ -1186,7 +1215,7 @@
         });
 
         // ============================================================
-        // KEWANGAN & CASH KEDAI (sama)
+        // KEWANGAN & CASH KEDAI
         // ============================================================
         let sales = [];
         let expenses = [];
@@ -1218,7 +1247,7 @@
         });
 
         // ============================================================
-        // STOCKTAKE: BAKI BERTERUSAN (sama)
+        // STOCKTAKE: BAKI BERTERUSAN
         // ============================================================
         window.defaultCategories = {
             "🥛 Susu Farm Fresh": [
@@ -1349,7 +1378,7 @@
         }
 
         // ============================================================
-        // FUNGSI UBAH KEDUDUKAN ITEM (sama)
+        // FUNGSI UBAH KEDUDUKAN ITEM
         // ============================================================
         function moveItemUp(category, index) {
             if (currentRole !== 'staff') return;
@@ -1597,7 +1626,7 @@
         }
 
         // ============================================================
-        // FUNGSI KEWANGAN (sama)
+        // FUNGSI KEWANGAN
         // ============================================================
         function addSales(e) {
             e.preventDefault();
@@ -1788,7 +1817,7 @@
         }
 
         // ============================================================
-        // FUNGSI CETAK PDF LAPORAN STOK (sama)
+        // FUNGSI CETAK PDF LAPORAN STOK
         // ============================================================
         function downloadStockPDF() {
             const dateVal = document.getElementById('stockDate').value;
@@ -1891,7 +1920,7 @@
         }
 
         // ============================================================
-        // FUNGSI CETAK PDF LAPORAN KEWANGAN (sama)
+        // FUNGSI CETAK PDF LAPORAN KEWANGAN
         // ============================================================
         function downloadPDF() {
             const selectedMonth = document.getElementById('filterMonth').value;
@@ -1988,6 +2017,87 @@
         }
 
         // ============================================================
+        // PWA: SERVICE WORKER + INSTALL + OFFLINE DETECTION
+        // ============================================================
+
+        // 1. DAFTAR SERVICE WORKER
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js', { scope: './' })
+                    .then((reg) => {
+                        console.log('✅ Service Worker berdaftar:', reg.scope);
+
+                        // Semak kemaskini
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showToast('🔄 Versi baru tersedia. Tutup & buka semula app.');
+                                }
+                            });
+                        });
+                    })
+                    .catch((err) => console.error('❌ Service Worker gagal:', err));
+            });
+        }
+
+        // 2. INSTALL PROMPT
+        let deferredPrompt = null;
+        const btnInstall = document.getElementById('btnInstallPWA');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (btnInstall) btnInstall.classList.remove('hidden');
+        });
+
+        function installPWA() {
+            if (!deferredPrompt) {
+                showToast('ℹ️ Guna menu browser → "Add to Home Screen"');
+                return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choice) => {
+                if (choice.outcome === 'accepted') {
+                    showToast('🎉 App berjaya diinstall!');
+                    if (btnInstall) btnInstall.classList.add('hidden');
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ PWA diinstall');
+            if (btnInstall) btnInstall.classList.add('hidden');
+            showToast('🎉 App berjaya diinstall ke peranti!');
+        });
+
+        // 3. OFFLINE / ONLINE DETECTION
+        const offlineBadge = document.getElementById('offlineBadge');
+
+        function updateOnlineStatus() {
+            if (!navigator.onLine) {
+                if (offlineBadge) offlineBadge.classList.remove('hidden');
+                showToast('📴 Anda offline. Data akan sync bila online semula.');
+            } else {
+                if (offlineBadge) offlineBadge.classList.add('hidden');
+            }
+        }
+        window.addEventListener('online',  updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        // 4. DEEP LINK (shortcut PWA)
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(location.search);
+            const open = params.get('open');
+            if (open === 'stock') setTimeout(() => openStockModal(), 800);
+            if (open === 'cash')  setTimeout(() => openCashShopModal(), 800);
+        });
+
+        // 5. HALANG ZOOM PELIK DI MOBILE
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+        // ============================================================
         // INISIALISASI
         // ============================================================
         window.addEventListener('DOMContentLoaded', () => {
@@ -1997,8 +2107,168 @@
                 applyRoleUI();
             }
             initMasterStockListener();
+            updateOnlineStatus(); // PWA: semak status online
         });
     </script>
 </body>
 </html>
 ```
+
+---
+
+📁 Fail lain yang WAJIB ada dalam folder yang sama
+
+Anda juga perlu 2 fail ini yang saya berikan dalam jawapan sebelum ini:
+
+manifest.json
+
+```json
+{
+  "name": "Sistem Urus Niaga & Stocktake",
+  "short_name": "UrusNiaga",
+  "description": "Sistem urus niaga, belanja, stocktake & cash kedai dengan auto-sync cloud.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "lang": "ms",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Stocktake",
+      "short_name": "Stok",
+      "url": "./index.html?open=stock",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cash Kedai",
+      "short_name": "Cash",
+      "url": "./index.html?open=cash",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+```
+
+service-worker.js
+
+```javascript
+/* ============================================================
+   SERVICE WORKER - Sistem Urus Niaga & Stocktake
+   ============================================================ */
+const CACHE_NAME    = 'urusniaga-v1';
+const RUNTIME_CACHE = 'urusniaga-runtime-v1';
+
+const CORE_ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  'https://cdn.tailwindcss.com',
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'
+];
+
+/* INSTALL */
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return Promise.allSettled(
+        CORE_ASSETS.map((url) =>
+          cache.add(url).catch((err) => console.warn('[SW] Gagal cache:', url, err))
+        )
+      );
+    }).then(() => self.skipWaiting())
+  );
+});
+
+/* ACTIVATE */
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...');
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME && key !== RUNTIME_CACHE) {
+            console.log('[SW] Buang cache lama:', key);
+            return caches.delete(key);
+          }
+        })
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+/* FETCH */
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  if (req.method !== 'GET') return;
+
+  /* Jangan cache Firebase (mesti live) */
+  if (
+    url.hostname.includes('firebaseio.com') ||
+    url.hostname.includes('firestore.googleapis.com') ||
+    url.hostname.includes('identitytoolkit.googleapis.com') ||
+    url.hostname.includes('securetoken.googleapis.com') ||
+    (url.hostname.includes('googleapis.com') && url.pathname.includes('/v1/'))
+  ) {
+    return;
+  }
+
+  /* Navigasi HTML → Network First */
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put('./index.html', copy));
+          return res;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  /* Aset statik → Cache First */
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req)
+        .then((res) => {
+          if (!res || res.status !== 200 || res.type === 'opaque') return res;
+          const copy = res.clone();
+          caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy));
+          return res;
+        })
+        .catch(() => {
+          if (req.destination === 'image') {
+            return caches.match('./icons/icon-192.png');
+          }
+        });
+    })
+  );
+});
+
+/* MESEJ DARI PAGE */
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data === 'CLEAR_CACHE') {
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+  }
+});
