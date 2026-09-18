@@ -10,11 +10,9 @@
          ============================================================ -->
     <script>
     (function () {
-      // ---------- 1) IKON SVG DATA URL ----------
       const ICON_192 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f172a'/%3E%3Ctext x='96' y='132' font-size='120' text-anchor='middle'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E";
       const ICON_512 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f172a'/%3E%3Ctext x='256' y='350' font-size='320' text-anchor='middle'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E";
 
-      // ---------- 2) MANIFEST (embedded) ----------
       const manifestData = {
         name: "Sistem Urus Niaga & Stocktake",
         short_name: "UrusNiaga",
@@ -40,26 +38,16 @@
         manifestURL = URL.createObjectURL(blob);
       } catch (e) { console.warn("Manifest blob gagal:", e); }
 
-      // ---------- 3) SERVICE WORKER CODE (embedded) ----------
       const SW_CODE = `
         const CACHE_NAME = 'urusniaga-v1';
         const RUNTIME_CACHE = 'urusniaga-runtime-v1';
-
         self.addEventListener('install', (e) => { self.skipWaiting(); });
         self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
-
         self.addEventListener('fetch', (event) => {
           const req = event.request;
           if (req.method !== 'GET') return;
           const url = req.url;
-          if (
-            url.includes('firebaseio.com') ||
-            url.includes('firestore.googleapis.com') ||
-            url.includes('identitytoolkit.googleapis.com') ||
-            url.includes('securetoken.googleapis.com') ||
-            url.includes('gstatic.com') === false && !url.startsWith('http')
-          ) return;
-
+          if (url.includes('firebaseio.com') || url.includes('firestore.googleapis.com') || url.includes('identitytoolkit.googleapis.com') || url.includes('securetoken.googleapis.com')) return;
           event.respondWith(
             caches.match(req).then((cached) => {
               if (cached) return cached;
@@ -75,32 +63,22 @@
         });
       `;
 
-      // ---------- 4) PASANG MANIFEST KE <head> ----------
       function attachManifest() {
         if (!manifestURL) return;
         let link = document.querySelector('link[rel="manifest"]');
-        if (link) {
-          link.href = manifestURL;
-        } else {
-          link = document.createElement("link");
-          link.rel = "manifest";
-          link.href = manifestURL;
-          document.head.appendChild(link);
-        }
+        if (link) { link.href = manifestURL; }
+        else { link = document.createElement("link"); link.rel = "manifest"; link.href = manifestURL; document.head.appendChild(link); }
       }
       if (document.head) attachManifest();
       else document.addEventListener("DOMContentLoaded", attachManifest);
 
-      // ---------- 5) DAFTAR SERVICE WORKER ----------
       if ("serviceWorker" in navigator) {
         let swBlobURL = null;
         try {
           const swBlob = new Blob([SW_CODE], { type: "application/javascript" });
           swBlobURL = URL.createObjectURL(swBlob);
         } catch (e) { console.warn("SW blob gagal:", e); }
-
         window.addEventListener("load", () => {
-          // Cuba fail luaran dahulu, kalau tiada baru guna blob
           navigator.serviceWorker.register("service-worker.js", { scope: "./" })
             .then((reg) => console.log("✅ SW (fail) berdaftar:", reg.scope))
             .catch(() => {
@@ -114,12 +92,9 @@
     })();
     </script>
 
-    <!-- ===== PWA META ===== -->
     <meta name="theme-color" content="#0f172a" />
     <meta name="description" content="Sistem Urus Niaga, Belanja, Stocktake & Cash Kedai dengan auto-sync cloud." />
-    <!-- <link rel="manifest" href="manifest.json" /> JS akan override ini -->
 
-    <!-- iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="UrusNiaga" />
@@ -155,6 +130,11 @@
         .auth-panel { display:none; }
         .auth-panel.active { display:block; }
         body { padding-bottom: env(safe-area-inset-bottom); }
+
+        /* View All Modal smooth scrollbar */
+        #viewAllBody tr { animation: fadeRow .25s ease-out backwards; }
+        @keyframes fadeRow { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:translateY(0);} }
+        #viewAllModalBox { will-change: transform, opacity; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-16">
@@ -278,8 +258,15 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Sejarah Jualan -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5">
-                <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span>📋 Sejarah Jualan</span><span id="salesCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
+                <div class="flex items-center justify-between mb-3 gap-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2 flex-wrap">
+                        <span>📋 Sejarah Jualan</span>
+                        <span id="salesCount" class="text-xs font-normal text-slate-400">0 rekod</span>
+                    </h3>
+                    <button onclick="openViewAll('sales')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-all active:scale-95 flex items-center gap-1 shrink-0">👁️ Semua</button>
+                </div>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
                     <table class="w-full text-left border-collapse text-sm">
                         <thead class="sticky top-0 bg-white border-b border-slate-100 text-slate-400 text-[11px] uppercase"><tr><th class="py-2.5 px-2">Tarikh</th><th class="py-2.5 px-2">Nota</th><th class="py-2.5 px-2 text-right">RM</th><th class="py-2.5 px-2 text-center col-action">Padam</th></tr></thead>
@@ -288,8 +275,15 @@
                 </div>
             </div>
 
+            <!-- Sejarah Resit & Belanja -->
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 p-5">
-                <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span>🧾 Sejarah Resit & Belanja</span><span id="expCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
+                <div class="flex items-center justify-between mb-3 gap-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2 flex-wrap">
+                        <span>🧾 Sejarah Resit & Belanja</span>
+                        <span id="expCount" class="text-xs font-normal text-slate-400">0 rekod</span>
+                    </h3>
+                    <button onclick="openViewAll('expenses')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all active:scale-95 flex items-center gap-1 shrink-0">👁️ Semua</button>
+                </div>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
                     <table class="w-full text-left border-collapse text-sm">
                         <thead class="sticky top-0 bg-white border-b border-slate-100 text-slate-400 text-[11px] uppercase"><tr><th class="py-2.5 px-2">Kaedah / Kategori</th><th class="py-2.5 px-2">Nota</th><th class="py-2.5 px-2 text-right">RM</th><th class="py-2.5 px-2 text-center col-action">Padam</th></tr></thead>
@@ -298,8 +292,15 @@
                 </div>
             </div>
 
+            <!-- Sejarah Cash Kedai -->
             <div class="bg-white rounded-2xl shadow-xs border border-amber-200 p-5">
-                <h3 class="font-bold text-slate-800 mb-3 text-sm flex items-center justify-between"><span class="text-amber-800">🏪 Sejarah Cash Kedai</span><span id="cashShopCount" class="text-xs font-normal text-slate-400">0 rekod</span></h3>
+                <div class="flex items-center justify-between mb-3 gap-2">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2 flex-wrap">
+                        <span class="text-amber-800">🏪 Sejarah Cash Kedai</span>
+                        <span id="cashShopCount" class="text-xs font-normal text-slate-400">0 rekod</span>
+                    </h3>
+                    <button onclick="openViewAll('cash')" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all active:scale-95 flex items-center gap-1 shrink-0">👁️ Semua</button>
+                </div>
                 <div class="overflow-x-auto max-h-72 overflow-y-auto">
                     <table class="w-full text-left border-collapse text-sm">
                         <thead class="sticky top-0 bg-white border-b border-slate-100 text-slate-400 text-[11px] uppercase"><tr><th class="py-2.5 px-2">Tarikh</th><th class="py-2.5 px-2">Catatan</th><th class="py-2.5 px-2 text-right">RM</th><th class="py-2.5 px-2 text-center col-action">Padam</th></tr></thead>
@@ -369,6 +370,51 @@
             </div>
         </section>
     </main>
+
+    <!-- ============================================================
+         MODAL VIEW ALL TRANSACTIONS (SMOOTH POPUP)
+         ============================================================ -->
+    <div id="viewAllModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 opacity-0 pointer-events-none transition-all duration-300 ease-out">
+        <div id="viewAllModalBox" class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-4xl max-h-[90vh] flex flex-col transform scale-90 transition-all duration-300 ease-out overflow-hidden">
+            <!-- Header -->
+            <div class="p-5 border-b border-slate-100 bg-slate-50/80 flex justify-between items-center sticky top-0 z-10">
+                <div class="flex items-center gap-3">
+                    <span id="viewAllIcon" class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold shrink-0">📋</span>
+                    <div class="min-w-0">
+                        <h2 id="viewAllTitle" class="font-bold text-slate-900 text-base sm:text-lg tracking-tight truncate">Semua Transaksi</h2>
+                        <p id="viewAllSubtitle" class="text-[11px] sm:text-xs text-slate-500 truncate">Senarai penuh transaksi</p>
+                    </div>
+                </div>
+                <button onclick="closeViewAll()" class="w-9 h-9 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-700 font-bold text-sm flex items-center justify-center transition-all active:scale-90 shrink-0">✕</button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
+                <div class="relative">
+                    <input type="text" id="viewAllSearch" oninput="renderViewAll()" placeholder="🔍 Cari transaksi (tarikh / nota / kategori)..." class="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50">
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔎</span>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl bg-white shadow-2xs">
+                    <table class="w-full text-sm border-collapse">
+                        <thead id="viewAllThead" class="bg-slate-50 text-slate-500 text-[11px] uppercase border-b border-slate-100"></thead>
+                        <tbody id="viewAllBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+
+                <div class="p-4 bg-slate-900 text-white rounded-2xl flex justify-between items-center shadow-md">
+                    <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider">💰 Jumlah Keseluruhan</span>
+                    <span id="viewAllTotalVal" class="text-lg font-bold text-emerald-400">RM 0.00</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center gap-2">
+                <span id="viewAllMeta" class="text-[11px] text-slate-500 font-medium"></span>
+                <button onclick="closeViewAll()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold px-5 py-2 rounded-xl text-xs transition-all shadow-sm">Tutup</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Cash Kedai -->
     <div id="cashShopModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300 ease-out">
@@ -581,7 +627,7 @@
 
     <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg text-sm hidden z-50">✅ Disalin!</div>
 
-    <!-- ======== JAVASCRIPT (bahagian logik app - kekal sama) ======== -->
+    <!-- ======== JAVASCRIPT ======== -->
     <script>
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -732,7 +778,7 @@
                     closeLoginModal(); applyRoleUI();
                     showToast('👋 Selamat Datang, ' + displayName);
                 })
-                .catch((err) => {
+                .catch(() => {
                     let role = email.toLowerCase() === BOSS_EMAIL.toLowerCase() ? 'boss' : 'staff';
                     saveRoleToRTDB(user.uid, role, user.displayName || email, email);
                     sessionStorage.setItem('user_role', role);
@@ -826,6 +872,173 @@
             renderFinance(); renderStockTable(); initChatSystem();
         }
 
+        // ============================================================
+        // VIEW ALL MODAL — SEMUA TRANSAKSI
+        // ============================================================
+        let currentViewAllType = 'sales';
+        let viewAllModalOpen = false;
+
+        function openViewAll(type) {
+            currentViewAllType = type;
+            const modal = document.getElementById('viewAllModal');
+            const box = document.getElementById('viewAllModalBox');
+
+            // Set header ikon / tajuk
+            const config = {
+                sales:   { icon: '📋', title: 'Semua Sejarah Jualan',      subtitle: 'Senarai penuh rekod jualan harian kedai',   bg: 'bg-emerald-100', text: 'text-emerald-700' },
+                expenses:{ icon: '🧾', title: 'Semua Resit & Belanja',     subtitle: 'Senarai penuh perbelanjaan & resit kedai', bg: 'bg-rose-100',    text: 'text-rose-700' },
+                cash:    { icon: '🏪', title: 'Semua Cash Kedai',          subtitle: 'Senarai penuh transaksi cash kedai (Float)', bg: 'bg-amber-100',   text: 'text-amber-800' }
+            };
+            const c = config[type] || config.sales;
+            const iconEl = document.getElementById('viewAllIcon');
+            iconEl.innerText = c.icon;
+            iconEl.className = `w-10 h-10 rounded-2xl ${c.bg} ${c.text} flex items-center justify-center text-xl font-bold shrink-0`;
+            document.getElementById('viewAllTitle').innerText = c.title;
+            document.getElementById('viewAllSubtitle').innerText = c.subtitle;
+
+            // Reset search
+            const searchEl = document.getElementById('viewAllSearch');
+            if (searchEl) searchEl.value = '';
+
+            renderViewAll();
+
+            // Animate open
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+            setTimeout(() => {
+                box.classList.remove('scale-90');
+                box.classList.add('scale-100');
+            }, 40);
+
+            viewAllModalOpen = true;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeViewAll() {
+            const modal = document.getElementById('viewAllModal');
+            const box = document.getElementById('viewAllModalBox');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-90');
+            setTimeout(() => {
+                modal.classList.remove('opacity-100');
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                document.body.style.overflow = 'auto';
+            }, 220);
+            viewAllModalOpen = false;
+        }
+
+        // Klik backdrop untuk tutup
+        document.getElementById('viewAllModal').addEventListener('click', (e) => {
+            if (e.target.id === 'viewAllModal') closeViewAll();
+        });
+
+        function renderViewAll() {
+            const thead = document.getElementById('viewAllThead');
+            const body = document.getElementById('viewAllBody');
+            const totalEl = document.getElementById('viewAllTotalVal');
+            const metaEl = document.getElementById('viewAllMeta');
+            const search = (document.getElementById('viewAllSearch')?.value || '').toLowerCase().trim();
+            const isBoss = (currentRole === 'boss');
+
+            let total = 0;
+            let rows = [];
+            let count = 0;
+
+            if (currentViewAllType === 'sales') {
+                thead.innerHTML = `<tr>
+                    <th class="py-3 px-3 text-left w-24">Tarikh</th>
+                    <th class="py-3 px-3 text-left">Keterangan / Nota</th>
+                    <th class="py-3 px-3 text-right w-32">Jumlah (RM)</th>
+                    ${isBoss ? '' : '<th class="py-3 px-3 text-center w-16">Padam</th>'}
+                </tr>`;
+                const filtered = sales
+                    .filter(s => !search || (s.desc || '').toLowerCase().includes(search) || (s.date || '').includes(search))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                filtered.forEach(s => {
+                    total += parseFloat(s.amount) || 0; count++;
+                    const delBtn = isBoss ? '' : `<button onclick="deleteSale(${s.id})" class="text-slate-400 hover:text-rose-500 font-bold p-1.5 rounded-lg hover:bg-rose-50 transition-all">✕</button>`;
+                    rows.push(`<tr class="hover:bg-emerald-50/40 transition-colors">
+                        <td class="py-3 px-3 text-slate-600 text-xs font-medium">${s.date}</td>
+                        <td class="py-3 px-3 text-slate-800 font-medium">${s.desc}</td>
+                        <td class="py-3 px-3 text-right font-bold text-emerald-600 whitespace-nowrap">+RM ${(parseFloat(s.amount) || 0).toFixed(2)}</td>
+                        ${isBoss ? '' : `<td class="py-3 px-3 text-center">${delBtn}</td>`}
+                    </tr>`);
+                });
+                totalEl.className = 'text-lg font-bold text-emerald-400';
+            } else if (currentViewAllType === 'expenses') {
+                thead.innerHTML = `<tr>
+                    <th class="py-3 px-3 text-left w-24">Tarikh</th>
+                    <th class="py-3 px-3 text-left w-44">Kaedah / Kategori</th>
+                    <th class="py-3 px-3 text-left">Keterangan</th>
+                    <th class="py-3 px-3 text-right w-32">Jumlah (RM)</th>
+                    ${isBoss ? '' : '<th class="py-3 px-3 text-center w-16">Padam</th>'}
+                </tr>`;
+                const filtered = expenses
+                    .filter(exp => !search || (exp.desc || '').toLowerCase().includes(search) || (exp.date || '').includes(search) || (exp.category || '').toLowerCase().includes(search) || (exp.method || '').toLowerCase().includes(search))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                filtered.forEach(exp => {
+                    total += parseFloat(exp.amount) || 0; count++;
+                    let badgeColor = 'bg-slate-100 text-slate-700 border border-slate-200';
+                    if (exp.method === 'Cash') badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
+                    else if (exp.method === 'QR') badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
+                    else if (exp.method === 'Touch n Go') badgeColor = 'bg-sky-50 text-sky-700 border border-sky-200';
+                    const delBtn = isBoss ? '' : `<button onclick="deleteExpense(${exp.id})" class="text-slate-400 hover:text-rose-500 font-bold p-1.5 rounded-lg hover:bg-rose-50 transition-all">✕</button>`;
+                    rows.push(`<tr class="hover:bg-rose-50/40 transition-colors">
+                        <td class="py-3 px-3 text-slate-600 text-xs font-medium whitespace-nowrap">${exp.date}</td>
+                        <td class="py-3 px-3"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} inline-block">${exp.method} • ${exp.category}</span></td>
+                        <td class="py-3 px-3 text-slate-800 font-medium">${exp.desc}</td>
+                        <td class="py-3 px-3 text-right font-bold text-rose-600 whitespace-nowrap">-RM ${(parseFloat(exp.amount) || 0).toFixed(2)}</td>
+                        ${isBoss ? '' : `<td class="py-3 px-3 text-center">${delBtn}</td>`}
+                    </tr>`);
+                });
+                totalEl.className = 'text-lg font-bold text-rose-400';
+            } else {
+                thead.innerHTML = `<tr>
+                    <th class="py-3 px-3 text-left w-24">Tarikh</th>
+                    <th class="py-3 px-3 text-left w-40">Jenis</th>
+                    <th class="py-3 px-3 text-left">Catatan</th>
+                    <th class="py-3 px-3 text-right w-32">Jumlah (RM)</th>
+                    ${isBoss ? '' : '<th class="py-3 px-3 text-center w-16">Padam</th>'}
+                </tr>`;
+                const filtered = cashInShop
+                    .filter(csh => !search || (csh.desc || '').toLowerCase().includes(search) || (csh.date || '').includes(search))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                filtered.forEach(csh => {
+                    const isOut = (csh.type === 'out');
+                    if (isOut) total -= parseFloat(csh.amount) || 0;
+                    else total += parseFloat(csh.amount) || 0;
+                    count++;
+                    const badge = isOut
+                        ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block">📤 Duit Keluar</span>`
+                        : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block">📥 Cash Tinggal</span>`;
+                    const amtColor = isOut ? 'text-rose-600' : 'text-amber-600';
+                    const sign = isOut ? '-' : '+';
+                    const delBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${csh.id})" class="text-slate-400 hover:text-rose-500 font-bold p-1.5 rounded-lg hover:bg-rose-50 transition-all">✕</button>`;
+                    rows.push(`<tr class="hover:bg-amber-50/40 transition-colors">
+                        <td class="py-3 px-3 text-slate-600 text-xs font-medium whitespace-nowrap">${csh.date}</td>
+                        <td class="py-3 px-3">${badge}</td>
+                        <td class="py-3 px-3 text-slate-800 font-medium">${csh.desc}</td>
+                        <td class="py-3 px-3 text-right font-bold ${amtColor} whitespace-nowrap">${sign}RM ${(parseFloat(csh.amount) || 0).toFixed(2)}</td>
+                        ${isBoss ? '' : `<td class="py-3 px-3 text-center">${delBtn}</td>`}
+                    </tr>`);
+                });
+                totalEl.className = `text-lg font-bold ${total >= 0 ? 'text-amber-400' : 'text-rose-400'}`;
+            }
+
+            if (rows.length === 0) {
+                const colspan = isBoss ? 3 : 4;
+                body.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-slate-400 text-sm font-medium">📭 Tiada rekod untuk dipaparkan${search ? ' bagi carian "'+search+'"' : ''}</td></tr>`;
+            } else {
+                body.innerHTML = rows.join('');
+            }
+
+            totalEl.innerText = `RM ${total.toFixed(2)}`;
+            if (metaEl) metaEl.innerText = `📊 ${count} rekod dipaparkan`;
+        }
+
+        // ============================================================
+        // CASH KEDAI MODAL
+        // ============================================================
         function openCashShopModal() {
             if (currentRole === 'boss') { showToast("⚠️ Mod Boss (Semakan Sahaja)"); return; }
             const modal = document.getElementById('cashShopModal');
@@ -842,6 +1055,9 @@
         }
         document.getElementById('cashShopModal').addEventListener('click', (e) => { if (e.target.id === 'cashShopModal') closeCashShopModal(); });
 
+        // ============================================================
+        // CHAT
+        // ============================================================
         let isChatOpen = false; let chatMessages = []; let totalUnreadCount = 0;
         function toggleChatModal() {
             const container = document.getElementById('chatDrawerContainer');
@@ -904,6 +1120,9 @@
             } else { badgeNav.classList.add('hidden'); badgeFloating.classList.add('hidden'); }
         }
 
+        // ============================================================
+        // STOCK MODAL
+        // ============================================================
         function openStockModal() {
             const modal = document.getElementById('stockModal'); const box = document.getElementById('stockModalBox');
             modal.classList.remove('opacity-0', 'pointer-events-none'); modal.classList.add('opacity-100');
@@ -920,10 +1139,19 @@
             if (searchInput) { searchInput.value = ''; renderStockTable(); searchInput.focus(); }
         }
         document.getElementById('stockModal').addEventListener('click', (e) => { if (e.target.id === 'stockModal') closeStockModal(); });
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { closeStockModal(); closeCashShopModal(); if (isChatOpen) toggleChatModal(); }
+            if (e.key === 'Escape') {
+                if (viewAllModalOpen) closeViewAll();
+                closeStockModal();
+                closeCashShopModal();
+                if (isChatOpen) toggleChatModal();
+            }
         });
 
+        // ============================================================
+        // DATA & RENDER
+        // ============================================================
         let sales = []; let expenses = []; let cashInShop = [];
         const today = new Date();
         document.getElementById('saleDate').valueAsDate = today;
@@ -982,7 +1210,7 @@
                 if (cloudStatus) { cloudStatus.innerText = '☁️ Tersimpan ke Firebase'; cloudStatus.className = 'text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full'; }
                 if (triggerStatus) triggerStatus.innerText = '☁️ Tersimpan ke Firebase';
                 renderStockTable();
-            }, (error) => {
+            }, () => {
                 if (cloudStatus) { cloudStatus.innerText = '❌ Gagal sambung'; cloudStatus.className = 'text-xs font-medium text-red-600 bg-red-50 px-3 py-1 rounded-full'; }
                 if (triggerStatus) triggerStatus.innerText = '❌ Gagal';
             });
@@ -1250,6 +1478,9 @@
             document.getElementById('catGaji').innerText = `RM ${catGajiTotal.toFixed(2)}`;
             document.getElementById('catAis').innerText = `RM ${catAisTotal.toFixed(2)}`;
             document.getElementById('catLain').innerText = `RM ${catLainTotal.toFixed(2)}`;
+
+            // Refresh "View All" modal automatik jika sedang terbuka
+            if (viewAllModalOpen) renderViewAll();
         }
 
         function downloadStockPDF() {
@@ -1286,8 +1517,6 @@
             const totalCashInShop = document.getElementById('sumNetCash').innerText;
             const totalDeduction = document.getElementById('sumTotalDeduction').innerText;
             const netProfit = document.getElementById('sumNetProfit').innerText;
-            const expCash = document.getElementById('sumExpCash').innerText;
-            const expQR = document.getElementById('sumExpQR').innerText;
             const monthSales = sales.filter(s => s.date && s.date.startsWith(selectedMonth));
             const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(selectedMonth));
             const monthCashShop = cashInShop.filter(c => c.date && c.date.startsWith(selectedMonth));
@@ -1308,9 +1537,7 @@
 
         // ============================================================
         // PWA: INSTALL + OFFLINE DETECTION
-        // (SW registration sudah dijalankan di <head>)
         // ============================================================
-
         let deferredPrompt = null;
         const btnInstall = document.getElementById('btnInstallPWA');
 
