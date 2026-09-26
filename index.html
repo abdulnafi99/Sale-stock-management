@@ -232,12 +232,16 @@
                 </div>
                 <form id="expenseForm" onsubmit="addExpense(event)" class="space-y-4">
                     <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Tarikh</label><input type="date" id="expDate" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50"></div>
-                    <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Mod Pembayaran</label>
-                        <select id="expMethod" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Mod Pembayaran</label>
+                        <select id="expMethod" required onchange="toggleCashHint()" class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50">
                             <option value="Cash">💵 Cash (Tunai)</option>
                             <option value="QR">📱 QR Pay</option>
                             <option value="Touch n Go">💳 Touch 'n Go</option>
                         </select>
+                        <p id="cashAutoHint" class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1.5 flex items-start gap-1.5">
+                            <span>⚡</span><span><strong>Auto-Deduct:</strong> Belanja Cash akan ditolak secara automatik dari <strong>Baki Cash di Kedai (Float)</strong>.</span>
+                        </p>
                     </div>
                     <div><label class="block text-xs font-semibold text-slate-600 mb-1.5">Kategori</label>
                         <select id="expCategory" required class="w-full p-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50">
@@ -333,7 +337,7 @@
                         </div>
                         <h3 id="sumNetCash" class="text-2xl font-bold text-amber-300 mt-1">RM 0.00</h3>
                     </div>
-                    <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Tunai tinggal ditolak tunai keluar.</div>
+                    <div class="text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-700/40">Tunai tinggal ditolak tunai keluar (termasuk auto-deduct belanja Cash).</div>
                 </div>
 
                 <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 flex flex-col justify-between">
@@ -873,6 +877,22 @@
         }
 
         // ============================================================
+        // TOGGLE HINT AUTO-DEDUCT CASH (BARU)
+        // ============================================================
+        function toggleCashHint() {
+            const method = document.getElementById('expMethod')?.value;
+            const hint = document.getElementById('cashAutoHint');
+            if (!hint) return;
+            if (method === 'Cash') {
+                hint.classList.remove('hidden');
+                hint.classList.add('flex');
+            } else {
+                hint.classList.add('hidden');
+                hint.classList.remove('flex');
+            }
+        }
+
+        // ============================================================
         // VIEW ALL MODAL — SEMUA TRANSAKSI
         // ============================================================
         let currentViewAllType = 'sales';
@@ -1008,9 +1028,10 @@
                     if (isOut) total -= parseFloat(csh.amount) || 0;
                     else total += parseFloat(csh.amount) || 0;
                     count++;
-                    const badge = isOut
+                    const autoTag = csh.isAuto ? `<span class="text-[9px] font-bold bg-purple-100 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-md ml-1">⚡ AUTO</span>` : '';
+                    const badge = (isOut
                         ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block">📤 Duit Keluar</span>`
-                        : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block">📥 Cash Tinggal</span>`;
+                        : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block">📥 Cash Tinggal</span>`) + autoTag;
                     const amtColor = isOut ? 'text-rose-600' : 'text-amber-600';
                     const sign = isOut ? '-' : '+';
                     const delBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${csh.id})" class="text-slate-400 hover:text-rose-500 font-bold p-1.5 rounded-lg hover:bg-rose-50 transition-all">✕</button>`;
@@ -1380,6 +1401,10 @@
             document.getElementById('salesForm').reset(); document.getElementById('saleDate').valueAsDate = new Date();
             showToast("Total Sale Harian Berjaya Disimpan!");
         }
+
+        // ============================================================
+        // addExpense — AUTO-DEDUCT CASH (BARU)
+        // ============================================================
         function addExpense(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1390,9 +1415,29 @@
             const amount = parseFloat(document.getElementById('expAmount').value);
             const id = Date.now();
             db.ref('expenses/' + id).set({ id, date, method, category, desc, amount });
-            document.getElementById('expenseForm').reset(); document.getElementById('expDate').valueAsDate = new Date();
-            showToast("Perbelanjaan Berjaya Disimpan!");
+
+            // ⚡ AUTO-DEDUCT dari Cash Kedai kalau bayar guna CASH
+            if (method === 'Cash') {
+                const cashId = id + 1;
+                db.ref('cashInShop/' + cashId).set({
+                    id: cashId,
+                    date,
+                    type: 'out',
+                    desc: `[AUTO] ${category} - ${desc}`,
+                    amount,
+                    linkedExpenseId: id,
+                    isAuto: true
+                });
+                showToast("✅ Belanja Cash disimpan & ditolak dari Float!");
+            } else {
+                showToast("Perbelanjaan Berjaya Disimpan!");
+            }
+
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expDate').valueAsDate = new Date();
+            toggleCashHint();
         }
+
         function addCashInShop(e) {
             e.preventDefault();
             if (currentRole !== 'staff') return;
@@ -1406,7 +1451,22 @@
             closeCashShopModal(); showToast("Rekod Cash Kedai Disimpan!");
         }
         function deleteSale(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod jualan ini?")) db.ref('sales/' + id).remove(); }
-        function deleteExpense(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod perbelanjaan ini?")) db.ref('expenses/' + id).remove(); }
+
+        // ============================================================
+        // deleteExpense — PADAM AUTO-LINK (BARU)
+        // ============================================================
+        function deleteExpense(id) {
+            if (currentRole !== 'staff') return;
+            const linked = cashInShop.filter(c => c.linkedExpenseId === id);
+            const msg = linked.length > 0
+                ? "Padam rekod perbelanjaan ini?\n\n⚠️ Rekod auto-deduct di Cash Kedai juga akan dipadam."
+                : "Padam rekod perbelanjaan ini?";
+            if (confirm(msg)) {
+                linked.forEach(c => db.ref('cashInShop/' + c.id).remove());
+                db.ref('expenses/' + id).remove();
+            }
+        }
+
         function deleteCashInShop(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod cash kedai ini?")) db.ref('cashInShop/' + id).remove(); }
 
         function renderFinance() {
@@ -1455,7 +1515,8 @@
                 const isOut = (item.type === 'out');
                 if (item.date && item.date.startsWith(selectedMonth)) { if (isOut) totalCashShopMonth -= item.amount; else totalCashShopMonth += item.amount; }
                 const deleteBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                const badgeTag = isOut ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>` : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>`;
+                const autoBadge = item.isAuto ? `<span class="text-[9px] font-bold bg-purple-100 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-md ml-1 inline-block">⚡ AUTO</span>` : '';
+                const badgeTag = isOut ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>${autoBadge}` : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>${autoBadge}`;
                 const amtClass = isOut ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold';
                 const signStr = isOut ? '-' : '+';
                 cashShopBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2">${badgeTag}<div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
@@ -1526,8 +1587,9 @@
             if (monthExpenses.length === 0) expenseTableRows = `<tr><td colspan="4" style="text-align:center;padding:10px;color:#94a3b8;font-style:italic;">Tiada rekod perbelanjaan bagi bulan ini</td></tr>`;
             let cashShopTableRows = monthCashShop.map(c => {
                 const isOut = (c.type === 'out'); const signStr = isOut ? '-' : '+'; const colorStr = isOut ? '#dc2626' : '#d97706';
+                const autoTag = c.isAuto ? '<span style="background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px;font-weight:bold;font-size:8px;border:1px solid #d8b4fe;margin-left:4px;">⚡ AUTO</span>' : '';
                 const badgeTag = isOut ? '[DUIT KELUAR] ' : '[CASH TINGGAL] ';
-                return `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${c.date}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;"><strong style="color:${colorStr};">${badgeTag}</strong>${c.desc}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;color:${colorStr};font-weight:600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td></tr>`;
+                return `<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${c.date}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;"><strong style="color:${colorStr};">${badgeTag}</strong>${c.desc}${autoTag}</td><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;color:${colorStr};font-weight:600;">${signStr}RM ${parseFloat(c.amount).toFixed(2)}</td></tr>`;
             }).join('');
             if (monthCashShop.length === 0) cashShopTableRows = `<tr><td colspan="3" style="text-align:center;padding:10px;color:#94a3b8;font-style:italic;">Tiada rekod cash kedai bagi bulan ini</td></tr>`;
             const w = window.open('', '_blank');
@@ -1601,6 +1663,7 @@
             if (currentRole) applyRoleUI();
             initMasterStockListener();
             updateOnlineStatus();
+            toggleCashHint();
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
             if (isStandalone) { const btn = document.getElementById('btnInstallPWA'); if (btn) btn.classList.add('hidden'); }
         });
