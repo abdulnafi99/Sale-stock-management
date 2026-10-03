@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ms">
 <head>
@@ -1528,6 +1529,8 @@
             const amount = parseFloat(document.getElementById('saleAmount').value);
             const id = Date.now();
             db.ref('sales/' + id).set({ id, date, desc, amount });
+            // 🔑 Auto-tukar paparan bulan ke bulan rekod disimpan
+            if (date) document.getElementById('filterMonth').value = date.slice(0, 7);
             document.getElementById('salesForm').reset(); document.getElementById('saleDate').valueAsDate = new Date();
             showToast("Total Sale Harian Berjaya Disimpan!");
         }
@@ -1557,6 +1560,8 @@
             } else {
                 showToast("Perbelanjaan Berjaya Disimpan!");
             }
+            // 🔑 Auto-tukar paparan bulan ke bulan rekod disimpan
+            if (date) document.getElementById('filterMonth').value = date.slice(0, 7);
             document.getElementById('expenseForm').reset();
             document.getElementById('expDate').valueAsDate = new Date();
             toggleCashHint();
@@ -1571,6 +1576,8 @@
             const amount = parseFloat(document.getElementById('cashShopAmountModal').value);
             const id = Date.now();
             db.ref('cashInShop/' + id).set({ id, date, type, desc, amount });
+            // 🔑 Auto-tukar paparan bulan ke bulan rekod disimpan
+            if (date) document.getElementById('filterMonth').value = date.slice(0, 7);
             document.getElementById('cashShopFormModal').reset(); document.getElementById('cashShopDateModal').valueAsDate = new Date();
             closeCashShopModal(); showToast("Rekod Cash Kedai Disimpan!");
         }
@@ -1590,70 +1597,122 @@
 
         function deleteCashInShop(id) { if (currentRole !== 'staff') return; if (confirm("Padam rekod cash kedai ini?")) db.ref('cashInShop/' + id).remove(); }
 
+        // ============================================================
+        // RENDER FINANCE — DIPISAHKAN MENGIKUT BULAN
+        // Jadual sejarah HANYA paparkan rekod bulan yang dipilih.
+        // Bila masuk bulan baru, jadual kosong & hanya bulan itu sahaja.
+        // ============================================================
         function renderFinance() {
-            const selectedMonth = document.getElementById('filterMonth').value;
-            let totalSalesMonth = 0; let expCashTotal = 0, expQRTotal = 0, expTnGTot = 0;
-            let catSewaTotal = 0, catElektrikTotal = 0, catAirTotal = 0, catGajiTotal = 0, catAisTotal = 0, catLainTotal = 0;
-            let totalCashShopMonth = 0;
+            const monthNames = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+            const selectedMonth = document.getElementById('filterMonth').value || new Date().toISOString().slice(0, 7);
+
+            let monthLabel = selectedMonth;
+            if (selectedMonth && selectedMonth.includes('-')) {
+                const [y, m] = selectedMonth.split('-');
+                monthLabel = `${monthNames[parseInt(m, 10) - 1]} ${y}`;
+            }
+
+            // 🔑 Filter: hanya rekod dalam bulan yang dipilih
+            const inMonth = (d) => typeof d === 'string' && d.startsWith(selectedMonth);
             const isBoss = (currentRole === 'boss');
 
-            const salesBody = document.getElementById('salesTableBody'); salesBody.innerHTML = '';
-            const filteredSales = sales.sort((a, b) => new Date(b.date) - new Date(a.date));
-            document.getElementById('salesCount').innerText = `${filteredSales.length} rekod`;
-            filteredSales.forEach(item => {
-                if (item.date && item.date.startsWith(selectedMonth)) totalSalesMonth += item.amount;
-                const deleteBtn = isBoss ? '' : `<button onclick="deleteSale(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                salesBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mb-0.5">💰 Jualan</span><div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right font-semibold text-emerald-600">+${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
-            });
+            let totalSalesMonth = 0;
+            let expCashTotal = 0, expQRTotal = 0, expTnGTot = 0;
+            let catSewaTotal = 0, catElektrikTotal = 0, catAirTotal = 0, catGajiTotal = 0, catAisTotal = 0, catLainTotal = 0;
+            let totalCashShopMonth = 0;
 
-            const expenseBody = document.getElementById('expenseTableBody'); expenseBody.innerHTML = '';
-            const filteredExpenses = expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
-            document.getElementById('expCount').innerText = `${filteredExpenses.length} rekod`;
-            filteredExpenses.forEach(item => {
-                if (item.date && item.date.startsWith(selectedMonth)) {
-                    if (item.method === 'Cash') expCashTotal += item.amount;
-                    else if (item.method === 'QR') expQRTotal += item.amount;
-                    else if (item.method === 'Touch n Go') expTnGTot += item.amount;
-                    if (item.category === 'Sewa Kedai') catSewaTotal += item.amount;
-                    else if (item.category === 'Bil Elektrik') catElektrikTotal += item.amount;
-                    else if (item.category === 'Bil Air') catAirTotal += item.amount;
-                    else if (item.category === 'Gaji Pekerja') catGajiTotal += item.amount;
-                    else if (item.category === 'AIS') catAisTotal += item.amount;
-                    else catLainTotal += item.amount;
-                }
+            /* ---------------- SEJARAH JUALAN (BULAN SAHAJA) ---------------- */
+            const salesBody = document.getElementById('salesTableBody');
+            salesBody.innerHTML = '';
+            const monthSales = sales
+                .filter(item => inMonth(item.date))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('salesCount').innerText = `${monthSales.length} rekod • ${monthLabel}`;
+
+            monthSales.forEach(item => {
+                totalSalesMonth += parseFloat(item.amount) || 0;
+                const deleteBtn = isBoss ? '' : `<button onclick="deleteSale(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+                salesBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 inline-block mb-0.5">💰 Jualan</span><div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right font-semibold text-emerald-600">+${(parseFloat(item.amount) || 0).toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
+            });
+            if (monthSales.length === 0) {
+                salesBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 text-xs font-medium">📭 Tiada rekod jualan bagi ${monthLabel}</td></tr>`;
+            }
+
+            /* ---------------- SEJARAH RESIT & BELANJA (BULAN SAHAJA) ---------------- */
+            const expenseBody = document.getElementById('expenseTableBody');
+            expenseBody.innerHTML = '';
+            const monthExpenses = expenses
+                .filter(item => inMonth(item.date))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('expCount').innerText = `${monthExpenses.length} rekod • ${monthLabel}`;
+
+            monthExpenses.forEach(item => {
+                const amt = parseFloat(item.amount) || 0;
+                if (item.method === 'Cash') expCashTotal += amt;
+                else if (item.method === 'QR') expQRTotal += amt;
+                else if (item.method === 'Touch n Go') expTnGTot += amt;
+
+                if (item.category === 'Sewa Kedai') catSewaTotal += amt;
+                else if (item.category === 'Bil Elektrik') catElektrikTotal += amt;
+                else if (item.category === 'Bil Air') catAirTotal += amt;
+                else if (item.category === 'Gaji Pekerja') catGajiTotal += amt;
+                else if (item.category === 'AIS') catAisTotal += amt;
+                else catLainTotal += amt;
+
                 let badgeColor = 'bg-slate-100 text-slate-700';
                 if (item.method === 'Cash') badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200';
                 else if (item.method === 'QR') badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
                 else if (item.method === 'Touch n Go') badgeColor = 'bg-sky-50 text-sky-700 border border-sky-200';
-                const deleteBtn = isBoss ? '' : `<button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
-                expenseBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} inline-block mb-0.5">${item.method} • ${item.category}</span><div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right font-semibold text-rose-600">-${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
-            });
 
-            const cashShopBody = document.getElementById('cashShopTableBody'); cashShopBody.innerHTML = '';
-            const filteredCashShop = cashInShop.sort((a, b) => new Date(b.date) - new Date(a.date));
-            document.getElementById('cashShopCount').innerText = `${filteredCashShop.length} rekod`;
-            filteredCashShop.forEach(item => {
+                const deleteBtn = isBoss ? '' : `<button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
+                expenseBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${badgeColor} inline-block mb-0.5">${item.method} • ${item.category}</span><div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right font-semibold text-rose-600">-${amt.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
+            });
+            if (monthExpenses.length === 0) {
+                expenseBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 text-xs font-medium">📭 Tiada rekod belanja bagi ${monthLabel}</td></tr>`;
+            }
+
+            /* ---------------- SEJARAH CASH KEDAI (BULAN SAHAJA) ---------------- */
+            const cashShopBody = document.getElementById('cashShopTableBody');
+            cashShopBody.innerHTML = '';
+            const monthCashShop = cashInShop
+                .filter(item => inMonth(item.date))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+            document.getElementById('cashShopCount').innerText = `${monthCashShop.length} rekod • ${monthLabel}`;
+
+            monthCashShop.forEach(item => {
                 const isOut = (item.type === 'out');
-                if (item.date && item.date.startsWith(selectedMonth)) { if (isOut) totalCashShopMonth -= item.amount; else totalCashShopMonth += item.amount; }
+                const amt = parseFloat(item.amount) || 0;
+                if (isOut) totalCashShopMonth -= amt; else totalCashShopMonth += amt;
+
                 const deleteBtn = isBoss ? '' : `<button onclick="deleteCashInShop(${item.id})" class="text-slate-400 hover:text-rose-500 p-1">✕</button>`;
                 const autoBadge = item.isAuto ? `<span class="text-[9px] font-bold bg-purple-100 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded-md ml-1 inline-block">⚡ AUTO</span>` : '';
-                const badgeTag = isOut ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>${autoBadge}` : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>${autoBadge}`;
+                const badgeTag = isOut
+                    ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 inline-block mb-0.5">📤 Duit Keluar</span>${autoBadge}`
+                    : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-block mb-0.5">📥 Cash Tinggal</span>${autoBadge}`;
                 const amtClass = isOut ? 'text-rose-600 font-bold' : 'text-amber-600 font-bold';
                 const signStr = isOut ? '-' : '+';
-                cashShopBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2">${badgeTag}<div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${item.amount.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
-            });
 
+                cashShopBody.innerHTML += `<tr class="hover:bg-slate-50/80"><td class="py-2.5 px-2">${badgeTag}<div class="text-[11px] text-slate-400">${item.date}</div></td><td class="py-2.5 px-2 text-slate-700 font-medium">${item.desc}</td><td class="py-2.5 px-2 text-right ${amtClass}">${signStr}RM ${amt.toFixed(2)}</td><td class="py-2.5 px-2 text-center col-action">${deleteBtn}</td></tr>`;
+            });
+            if (monthCashShop.length === 0) {
+                cashShopBody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 text-xs font-medium">📭 Tiada rekod cash kedai bagi ${monthLabel}</td></tr>`;
+            }
+
+            /* ---------------- RINGKASAN BULANAN ---------------- */
             const totalDeduction = catSewaTotal + catElektrikTotal + catAirTotal + catGajiTotal + catAisTotal + catLainTotal;
             const netProfit = totalSalesMonth - totalDeduction;
+
             document.getElementById('sumTotalSales').innerText = `RM ${totalSalesMonth.toFixed(2)}`;
             document.getElementById('sumNetCash').innerText = `RM ${totalCashShopMonth.toFixed(2)}`;
             document.getElementById('sumTotalDeduction').innerText = `RM ${totalDeduction.toFixed(2)}`;
             document.getElementById('sumExpCash').innerText = `RM ${expCashTotal.toFixed(0)}`;
             document.getElementById('sumExpQR').innerText = `RM ${expQRTotal.toFixed(0)}`;
             document.getElementById('sumExpTnG').innerText = `RM ${expTnGTot.toFixed(0)}`;
+
             const netElement = document.getElementById('sumNetProfit');
             netElement.innerText = `RM ${netProfit.toFixed(2)}`;
             netElement.className = `text-2xl font-bold mt-1 ${netProfit >= 0 ? 'text-sky-400' : 'text-rose-400'}`;
+
             document.getElementById('catSewa').innerText = `RM ${catSewaTotal.toFixed(2)}`;
             document.getElementById('catElektrik').innerText = `RM ${catElektrikTotal.toFixed(2)}`;
             document.getElementById('catAir').innerText = `RM ${catAirTotal.toFixed(2)}`;
@@ -1784,3 +1843,4 @@
     </script>
 </body>
 </html>
+`
