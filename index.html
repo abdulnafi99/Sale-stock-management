@@ -96,6 +96,11 @@
   --sh-1: 0 1px 2px rgba(29,41,36,.04), 0 8px 24px -12px rgba(29,41,36,.16);
   --sh-2: 0 2px 6px rgba(29,41,36,.05), 0 22px 44px -18px rgba(29,41,36,.28);
   --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --gutter: 16px;
   --out: cubic-bezier(.16, 1, .3, 1);
 }
 * { box-sizing: border-box; }
@@ -129,8 +134,9 @@ input[type=number] { -moz-appearance: textfield; }
   background: rgba(242, 244, 239, .78);
   backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px);
   border-bottom: 1px solid var(--line);
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--sat);
 }
+.safe-x { padding-left: max(var(--gutter), var(--sal)) !important; padding-right: max(var(--gutter), var(--sar)) !important; }
 .brand-logo {
   width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 22px;
   background: linear-gradient(135deg, var(--primary-2), var(--primary)); color: #fff;
@@ -381,6 +387,34 @@ button.pill:active { transform: scale(.95); }
 .tl-item.fresh { animation: freshIn .8s var(--spring) both; }
 @keyframes freshIn { 0% { opacity: 0; transform: translateY(-14px) scale(.95); background: var(--amber-soft); } 100% { opacity: 1; transform: none; } }
 
+/* ---------- Mobile compact ---------- */
+@media (max-width: 767px) {
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .bento > .tile { grid-column: span 2 / span 2; }
+  .bento > .tile.m-half { grid-column: span 1 / span 1; padding: 14px; }
+  .m-half .t-icon { width: 34px; height: 34px; font-size: 16px; border-radius: 11px; }
+  .m-half .mid-num { font-size: 19px; }
+  .m-half .t-label { font-size: 10px; margin-top: 10px; }
+  .m-half .chip { font-size: 10px; padding: 3px 8px; }
+  .m-half .exp-split { grid-template-columns: 1fr; gap: 4px; }
+  .m-half .exp-split > div { display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; }
+  .tile { padding: 16px; border-radius: 22px; }
+  .tile-hero { min-height: 0 !important; }
+  .big-num { font-size: 32px; }
+  .hdr-sub { display: none; }
+  .pill { height: 34px; padding: 0 11px; }
+  .pill input[type=month] { width: 128px; font-size: 12px; }
+  #cloudStatus { font-size: 10px; padding: 3px 8px; }
+  .sum-strip { gap: 6px !important; }
+  .sum-strip .sum-card { padding: 8px 6px; border-radius: 14px; text-align: center; }
+  .sum-strip .sum-card .n { font-size: 18px; }
+  .sum-strip .sum-card .l { font-size: 8.5px; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet-head { padding: 12px 16px; }
+  .sheet-head .t-icon { width: 36px; height: 36px; font-size: 17px; }
+  .sheet-body { padding: 16px; }
+  .stock-hint { display: none; }
+}
+
 /* ---------- Modals ---------- */
 .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
   padding: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
@@ -395,7 +429,11 @@ button.pill:active { transform: scale(.95); }
 .sheet-foot { padding: 14px 20px; border-top: 1px solid var(--line); background: #fff; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 @media (max-width: 640px) {
   .modal.as-sheet { align-items: flex-end; padding: 0; padding-top: calc(24px + env(safe-area-inset-top, 0px)); }
-  .modal.as-sheet .sheet { border-radius: 28px 28px 0 0; max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px)); transform: translateY(100%); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .modal.as-sheet .sheet { border-radius: 28px 28px 0 0; max-height: calc(100dvh - 24px - var(--sat)); transform: translateY(100%); }
+  #stockModal.as-sheet .sheet { height: calc(100dvh - 24px - var(--sat)) !important; }
+  .modal.as-sheet .sheet-body { padding-bottom: calc(20px + var(--sab)); }
+  .modal.as-sheet .sheet-foot { padding-bottom: calc(14px + var(--sab)); }
+  .modal.as-sheet .sheet-head, .modal.as-sheet .sheet-body, .modal.as-sheet .sheet-foot { padding-left: max(16px, var(--sal)); padding-right: max(16px, var(--sar)); }
   .modal.as-sheet.is-open .sheet { transform: none; }
   .modal.as-sheet .sheet::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 99px; background: rgba(29,41,36,.15); margin: 8px auto 0; }
 }
@@ -407,12 +445,12 @@ button.pill:active { transform: scale(.95); }
 #chatDrawerContainer.open { pointer-events: auto; }
 #chatBackdrop { position: absolute; inset: 0; background: rgba(18,30,24,.35); backdrop-filter: blur(6px); opacity: 0; transition: opacity .3s; }
 #chatDrawerContainer.open #chatBackdrop { opacity: 1; }
-#chatDrawer { position: absolute; top: 0; right: 0; bottom: 0; width: 100%; max-width: 400px; background: #fff; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .45s var(--out); box-shadow: -20px 0 50px -20px rgba(18,30,24,.4); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+#chatDrawer { position: absolute; top: 0; right: 0; bottom: 0; width: 100%; max-width: 400px; background: #fff; display: flex; flex-direction: column; transform: translateX(100%); transition: transform .45s var(--out); box-shadow: -20px 0 50px -20px rgba(18,30,24,.4); padding-top: var(--sat); padding-bottom: var(--sab); padding-right: var(--sar); }
 #chatDrawerContainer.open #chatDrawer { transform: none; }
 .bubble { padding: 10px 14px; border-radius: 18px; font-size: 13px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
 .msg-in { animation: msgIn .4s var(--spring) both; }
 @keyframes msgIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
-.fab { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 40; width: 58px; height: 58px; border-radius: 20px; border: 0; display: grid; place-items: center; font-size: 24px; color: #fff;
+.fab { position: fixed; right: max(16px, calc(var(--sar) + 8px)); bottom: calc(16px + var(--sab)); z-index: 40; width: 58px; height: 58px; border-radius: 20px; border: 0; display: grid; place-items: center; font-size: 24px; color: #fff;
   background: linear-gradient(135deg, var(--primary-2), var(--primary)); box-shadow: 0 16px 30px -12px rgba(47,122,95,.8); transition: transform .3s var(--spring); }
 .fab:hover { transform: translateY(-3px) scale(1.05); }
 .fab:active { transform: scale(.92); }
@@ -438,23 +476,23 @@ button.pill:active { transform: scale(.95); }
 }
 </style>
 </head>
-<body class="antialiased pb-28">
+<body class="antialiased" style="padding-bottom:calc(96px + var(--sab))">
 
 <div id="splash"><div class="text-center"><div class="steam"><i></i><i></i><i></i></div><div class="cup-loader">☕</div><p class="text-xs font-bold mt-3" style="color:var(--muted)">Menyediakan kedai…</p></div></div>
 
 <!-- ================= HEADER ================= -->
 <header class="app-header">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+  <div class="max-w-6xl mx-auto safe-x py-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
     <div class="flex items-center gap-3 min-w-0">
       <div class="brand-logo">☕</div>
       <div class="min-w-0">
         <h1 class="text-lg font-extrabold tracking-tight leading-tight">Selagi Coffee</h1>
-        <p class="text-[11px] font-semibold" style="color:var(--muted)">Sistem Urus Niaga & Stocktake</p>
+        <p class="hdr-sub text-[11px] font-semibold" style="color:var(--muted)">Sistem Urus Niaga & Stocktake</p>
       </div>
     </div>
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="flex items-center gap-2 overflow-x-auto max-w-full" style="scrollbar-width:none;padding:2px 0">
       <label class="pill" title="Pilih bulan"><span style="color:var(--muted)">📅</span><input type="month" id="filterMonth" onchange="renderFinance()" aria-label="Bulan"></label>
-      <span id="roleBadge" class="pill c-green" style="border-color:transparent">👤 Staff</span>
+      <span id="roleBadge" class="pill c-green" style="border-color:transparent;max-width:140px;overflow:hidden;text-overflow:ellipsis">👤 Staff</span>
       <button id="btnInstallPWA" onclick="installPWA()" class="hidden pill c-green" style="border-color:transparent">⬇️ Install</button>
       <span id="offlineBadge" class="hidden pill c-rose" style="border-color:transparent">📴 Offline</span>
       <button onclick="toggleChatModal()" class="pill relative" aria-label="Mesej">💬 <span class="hidden sm:inline">Mesej</span><span id="unreadBadgeNav" class="badge-dot hidden">0</span></button>
@@ -463,7 +501,7 @@ button.pill:active { transform: scale(.95); }
   </div>
 </header>
 
-<main class="max-w-6xl mx-auto px-4 py-6">
+<main class="max-w-6xl mx-auto safe-x py-5">
   <div class="bento">
 
     <!-- Boss banner -->
@@ -512,19 +550,19 @@ button.pill:active { transform: scale(.95); }
     </section>
 
     <!-- Jualan -->
-    <section class="tile md:col-span-3 lg:col-span-3 flex flex-col" style="--d:80ms">
+    <section class="tile m-half md:col-span-3 lg:col-span-3 flex flex-col" style="--d:80ms">
       <div class="tile-head"><div class="t-icon c-green">💰</div><span id="salesCountChip" class="chip c-green">0 rekod</span></div>
       <p class="t-label mt-4">Jumlah Jualan</p>
       <div id="sumTotalSales" class="mid-num mt-1" style="color:var(--primary)">RM 0.00</div>
-      <p class="text-[11px] font-semibold mt-auto pt-3" style="color:var(--muted)">Terkumpul jualan harian kedai.</p>
+      <p id="salesAvgTxt" class="text-[11px] font-semibold mt-auto pt-3" style="color:var(--muted)">Terkumpul jualan harian kedai.</p>
     </section>
 
     <!-- Belanja -->
-    <section class="tile md:col-span-3 lg:col-span-3 flex flex-col" style="--d:120ms">
+    <section class="tile m-half md:col-span-3 lg:col-span-3 flex flex-col" style="--d:120ms">
       <div class="tile-head"><div class="t-icon c-rose">🧾</div><span id="expCountChip" class="chip c-rose">0 rekod</span></div>
       <p class="t-label mt-4">Kos / Belanja</p>
       <div id="sumTotalDeduction" class="mid-num mt-1" style="color:var(--rose)">RM 0.00</div>
-      <div class="grid grid-cols-3 gap-1.5 mt-auto pt-3 text-center">
+      <div class="exp-split grid grid-cols-3 gap-1.5 mt-auto pt-3 text-center">
         <div class="rounded-xl py-1.5" style="background:var(--surface-2)"><span class="block text-[10px] font-bold" style="color:var(--muted)">Cash</span><span id="sumExpCash" class="text-[11px] font-extrabold">RM 0</span></div>
         <div class="rounded-xl py-1.5" style="background:var(--surface-2)"><span class="block text-[10px] font-bold" style="color:var(--muted)">QR</span><span id="sumExpQR" class="text-[11px] font-extrabold">RM 0</span></div>
         <div class="rounded-xl py-1.5" style="background:var(--surface-2)"><span class="block text-[10px] font-bold" style="color:var(--muted)">TnG</span><span id="sumExpTnG" class="text-[11px] font-extrabold">RM 0</span></div>
@@ -735,7 +773,7 @@ button.pill:active { transform: scale(.95); }
     <div class="sheet-head">
       <div class="flex items-center gap-3 min-w-0">
         <div class="t-icon c-green">📋</div>
-        <div class="min-w-0"><h2 id="stockTitle" class="font-extrabold text-lg truncate">Semakan Stok Harian</h2><p class="text-xs font-semibold truncate" style="color:var(--muted)">Tekan / tahan + − untuk kemaskini baki</p></div>
+        <div class="min-w-0"><h2 id="stockTitle" class="font-extrabold text-lg truncate">Semakan Stok Harian</h2><p class="text-xs font-semibold truncate" style="color:var(--muted)">Tekan / tahan + − untuk ubah baki</p></div>
       </div>
       <div class="flex items-center gap-2">
         <span id="cloudStatus" class="chip c-green">☁️ Sync</span>
@@ -743,8 +781,8 @@ button.pill:active { transform: scale(.95); }
       </div>
     </div>
     <div class="sheet-body">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
-        <div class="sum-card" style="background:var(--surface-2)"><div class="l">Jumlah Item</div><div id="sumAll" class="n">0</div></div>
+      <div class="sum-strip grid grid-cols-4 gap-2.5 mb-4">
+        <div class="sum-card" style="background:var(--surface-2)"><div class="l">Jumlah</div><div id="sumAll" class="n">0</div></div>
         <div class="sum-card c-green"><div class="l">Mencukupi</div><div id="sumOk" class="n">0</div></div>
         <div class="sum-card c-amber"><div class="l">Rendah</div><div id="sumLow" class="n">0</div></div>
         <div class="sum-card c-rose"><div class="l">Habis</div><div id="sumOut" class="n">0</div></div>
@@ -769,7 +807,7 @@ button.pill:active { transform: scale(.95); }
         <button id="btnWhatsapp" class="btn btn-primary" style="padding:9px 14px;font-size:12px">📲 Salin WhatsApp</button>
         <button onclick="downloadStockPDF()" class="btn btn-soft" style="padding:9px 14px;font-size:12px">📄 Simpan PDF</button>
         <button id="btnReset" class="staff-only btn btn-soft" style="padding:9px 14px;font-size:12px">🔄 Reset = 5</button>
-        <span class="ml-auto self-center text-[11px] font-bold" style="color:var(--muted)">Garisan ┆ = limit minimum · Had 0–2000</span>
+        <span class="stock-hint ml-auto self-center text-[11px] font-bold" style="color:var(--muted)">Garisan ┆ = limit minimum · Had 0–2000</span>
       </div>
 
       <div id="stockGrid"></div>
@@ -1164,6 +1202,7 @@ function renderFinance() {
   animateNumber($('sumTotalSales'), a.totalSales);
   animateNumber($('sumTotalDeduction'), a.totalExp);
   $('salesCountChip').textContent = `${a.sales.length} rekod`;
+  $('salesAvgTxt').textContent = activeDays ? `Purata ${fmtRM(a.totalSales / activeDays, 0)} / hari` : 'Tiada jualan lagi.';
   $('expCountChip').textContent = `${a.expenses.length} rekod`;
   $('sumExpCash').textContent = fmtRM(a.method.Cash, 0);
   $('sumExpQR').textContent = fmtRM(a.method.QR, 0);
